@@ -8,11 +8,11 @@
 
 [直接下载安装包](https://github.com/dandan658/Film-Index-Emby/releases/download/v0.1.0-preview.1/FilmIndex.Emby-v0.1.0-preview.1-emby4.10.1.0.zip)
 
-[全部发布文件、源码与校验值](https://github.com/dandan658/Film-Index-Emby/releases/tag/v0.1.0-preview.1)
+[安装包和安装教程](https://github.com/dandan658/Film-Index-Emby/releases/tag/v0.1.0-preview.1)
 
 飞牛 Docker 无需终端：停止 Emby 容器，完整备份 Emby 数据目录，将旧 StrmAssistant 插件移到 plugins 目录外，再把包中的 **FilmIndex.Emby.dll** 放进 Emby 数据目录的 **plugins** 子目录，最后启动原容器。不需要更换 Emby 镜像或新建容器。
 
-详细安装、升级和回退步骤见 [安装说明](packaging/INSTALL.zh-CN.md)。包内包含安装脚本、许可证、完整对应源码和 SHA-256 校验值。不要复制测试 DLL 或服务器 DLL。
+详细安装、升级和回退步骤见 [安装说明](packaging/INSTALL.zh-CN.md)。压缩包内只保留插件 DLL 与安装教程；教程附插件校验值、完整许可证和对应源码下载链接。不要复制测试 DLL 或服务器 DLL。
 
 ## 本版范围
 
@@ -30,7 +30,7 @@
 
 ```powershell
 dotnet build ./StrmAssistant/StrmAssistant.csproj -c Release -p:EmbyServerPath=C:/path/to/emby/system
-python ./packaging/build-package.py --output C:/release-output
+python ./packaging/build-package.py --output C:/release-output --source-revision <构建DLL时的提交>
 ```
 
 服务端引用仅用于编译，不在安装包分发。GPL、Harmony、DiscUtils、OpenCC 的声明与来源均随包保留。独立项目不使用原 PRO 二进制，也不声称是原作者的 PRO 发行版。

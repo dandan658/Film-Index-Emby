@@ -6,7 +6,7 @@ Target: Emby **4.10.1.0**. Build: **0.1.0.0-development**. GPL community derivat
 
 - Exact official 4.10.1.0 compilation passes, using both portable and Windows reference distributions.
 - **49** assembly, rule and real-FFmpeg checks pass.
-- **132** fixture integration/contract checks pass inside isolated official Windows 4.10.1.0.
+- **136** fixture integration/contract checks pass inside isolated official Windows 4.10.1.0.
 - **17** installer/rollback checks pass under Windows BusyBox, including corruption refusal and native database preservation.
 - **8** JavaScript assertions pass; the generated native module also passes Node syntax validation.
 - Reports: `tests/results/`. These numbers are not feature counts or proof of full parity.
@@ -17,6 +17,8 @@ Target: Emby **4.10.1.0**. Build: **0.1.0.0-development**. GPL community derivat
 ## Implemented and exercised
 
 Exact-version API fixes; keyword/tag extraction exclusions; managed OpenCC conversion; music metadata/cover/stream persistence; external audio and subtitle scanning with failure preservation; permission-preserving Chinese title search; native proxy routing and scoped credentials; custom UDP discovery; same-user completion progress handling; selected-item cleanup; real FFmpeg capture with framing, cancellation, timeout and atomic output; authenticated extraction worker with root/identity/size validation and fallback; cross-library progress/favorite separation through actual physical library roots; version labels/quality ordering and configurable folder merge limit.
+
+Person metadata now supports TMDB-keyed biography/name overrides, person-specific IMDb IDs and profile artwork discovery, with field-lock and conflicting-identity checks. This is local normalized data, not automatic online person discovery.
 
 Local metadata preserves cast names, roles and known external person IDs through native refresh, respecting cast locks and rejecting malformed credits before changing fields. It supports Movie/Series/Season/Episode/BoxSet cache and overrides, patches, field locks, local artwork, external IDs, official/critic ratings, studios, production locations and special-episode display ordering. Conflicting identities are rejected before mutation. This normalized format does not claim full upstream cache compatibility.
 
@@ -41,7 +43,7 @@ Installer draft and file-manager instructions are in `packaging/`. Installation 
 
 1. HTTP ISO, DVD, advanced DV P7, multi-angle/complex disc acceptance, custom encoder chapter/BIF paths and broader disc fixtures.
 2. Complete Douban IMDb discovery, season-table construction, cast localization, poster fallback and richer rating update behavior; live acceptance.
-3. Person biography/image caches, groups, advanced ratings, special ordering compatibility and persistent image cache.
+3. Groups, advanced ratings, special ordering compatibility and persistent image cache.
 4. Live second-source marker import, full-season fingerprint matching, broader parallel cancellation/load acceptance.
 5. Actual OpenSubtitles download, notification delivery and native DOM/client UI acceptance.
 6. Linux/fnOS verification, full archive/license/source/hash validation and installation/rollback acceptance on fnOS.

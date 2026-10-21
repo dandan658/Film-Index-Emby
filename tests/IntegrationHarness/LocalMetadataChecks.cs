@@ -105,6 +105,27 @@ internal static class LocalMetadataChecks
         check(movie.OfficialRating == "PG-13" && movie.CriticRating == 92 && movie.Studios.Contains("Fixture studio") && movie.ProductionLocations.Contains("China"),
             "Extended local metadata respects each native rating, studio and location field lock");
         movie.LockedFields = Array.Empty<MetadataFields>();
+        var actor = new MediaBrowser.Controller.Entities.Person { Name = "Original actor", Overview = "Original biography" };
+        actor.SetProviderId(MetadataProviders.Tmdb, "990099");
+        options.MetadataEnhanceOptions.LocalMetadataMode = LocalMetadataMode.OverrideOnly; save(options);
+        var actorRelative = LocalMetadataStore.RelativePath(actor);
+        var actorOverride = Path.Combine(options.MetadataEnhanceOptions.LocalMetadataRoot, "override", actorRelative);
+        Directory.CreateDirectory(Path.GetDirectoryName(actorOverride)!);
+        await File.WriteAllTextAsync(actorOverride, """{"id":"990099","name":"缓存人物","overview":"本地人物简介","provider_ids":{"Imdb":"nm1234567"}}""");
+        check(await LocalMetadataStore.Process(actor, CancellationToken.None) && actor.Name == "缓存人物" && actor.Overview == "本地人物简介" && actor.GetProviderId(MetadataProviders.Imdb) == "nm1234567",
+            "Person cache restores biography and person-specific IMDb identity");
+        actor.LockedFields = new[] { MetadataFields.Name, MetadataFields.Overview };
+        actor.Name = "Locked actor"; actor.Overview = "Locked biography";
+        await LocalMetadataStore.Process(actor, CancellationToken.None);
+        check(actor.Name == "Locked actor" && actor.Overview == "Locked biography", "Person cache respects name and biography locks");
+        await File.WriteAllTextAsync(actorOverride, """{"id":"990098","name":"Wrong actor","overview":"Wrong biography"}""");
+        actor.LockedFields = Array.Empty<MetadataFields>();
+        check(!await LocalMetadataStore.Process(actor, CancellationToken.None) && actor.Name == "Locked actor", "Person cache rejects another person's TMDB identity before mutation");
+        var actorImages = Path.Combine(Path.GetDirectoryName(actorOverride)!, "images");
+        Directory.CreateDirectory(actorImages);
+        File.Copy(Path.Combine(Path.GetDirectoryName(overridden)!, "images", "poster.jpg"), Path.Combine(actorImages, "profile.jpg"));
+        check(new LocalMetadataImages(files).GetImages(actor, nativeOptions, new MediaBrowser.Controller.Providers.DirectoryService(StrmAssistant.Plugin.Instance.Logger, files), CancellationToken.None).Single().Type == ImageType.Primary,
+            "Person local image provider discovers the profile image independently of movie posters");
         var special = new MediaBrowser.Controller.Entities.TV.Episode { ParentIndexNumber = 0, IndexNumber = 2 };
         LocalMetadataStore.Apply(special, JsonNode.Parse("""{"season_number":0,"episode_number":2,"sort_episode_number":3,"sort_season_number":1}""")!.AsObject());
         check(special.SortIndexNumber == 3 && special.SortParentIndexNumber == 1 && special.ParentIndexNumber == 0 && special.IndexNumber == 2,

@@ -28,7 +28,7 @@ namespace StrmAssistant.Provider
             if (relative == null || options.LocalMetadataMode == LocalMetadataMode.Off || !Path.IsPathFullyQualified(options.LocalMetadataRoot)) return result;
             var images = Path.Combine(options.LocalMetadataRoot, "override", Path.GetDirectoryName(relative), "images");
             var name = Path.GetFileNameWithoutExtension(relative);
-            var mapping = item is Season || item is Episode
+            var mapping = item is Person ? new[] { ("profile", ImageType.Primary) } : item is Season || item is Episode
                 ? new[] { (name, ImageType.Primary) }
                 : new[] { ("poster", ImageType.Primary), ("fanart", ImageType.Backdrop), ("landscape", ImageType.Thumb),
                     ("clearlogo", ImageType.Logo), ("banner", ImageType.Banner), ("clearart", ImageType.Art), ("discart", ImageType.Disc) };

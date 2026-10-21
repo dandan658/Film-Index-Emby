@@ -11,8 +11,9 @@ using System.Threading.Tasks;
 namespace StrmAssistant.Provider
 {
     public sealed class LocalMetadataProvider : ICustomMetadataProvider<Movie>, ICustomMetadataProvider<Series>,
-        ICustomMetadataProvider<Season>, ICustomMetadataProvider<Episode>, ICustomMetadataProvider<BoxSet>
+        ICustomMetadataProvider<Season>, ICustomMetadataProvider<Episode>, ICustomMetadataProvider<BoxSet>, ICustomMetadataProvider<Person>
     {
+        public Task<ItemUpdateType> FetchAsync(MetadataResult<Person> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result, token);
         public string Name => "Film Index Local Metadata";
         private static async Task<ItemUpdateType> Fetch<T>(MetadataResult<T> result, CancellationToken token) where T : BaseItem
         {

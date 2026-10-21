@@ -23,7 +23,7 @@ namespace StrmAssistant.Common
             BaseItem owner = item is Episode episode ? episode.Series : item is Season season ? season.Series : item;
             var id = owner?.GetProviderId(MetadataProviders.Tmdb);
             if (id == null || !Regex.IsMatch(id, @"^\d{1,12}$", RegexOptions.CultureInvariant)) return null;
-            var category = item is Movie ? "tmdb-movies2" : item is BoxSet ? "tmdb-collections" :
+            var category = item is Person ? "tmdb-people" : item is Movie ? "tmdb-movies2" : item is BoxSet ? "tmdb-collections" :
                 item is Series || item is Season || item is Episode ? "tmdb-tv" : null;
             if (category == null) return null;
             var name = item is Series ? "series" : "all";
@@ -110,7 +110,7 @@ namespace StrmAssistant.Common
                 {
                     var value = StringValue(pair.Value);
                     // Import only identifiers, never arbitrary URLs or unknown provider-specific settings.
-                    var valid = pair.Key.Equals("Imdb", StringComparison.OrdinalIgnoreCase) ? IntroDbRules.ValidImdb(value) :
+                    var valid = pair.Key.Equals("Imdb", StringComparison.OrdinalIgnoreCase) ? (item is Person ? value != null && Regex.IsMatch(value, @"^nm\d{5,12}$", RegexOptions.CultureInvariant) : IntroDbRules.ValidImdb(value)) :
                         (pair.Key.Equals("Tmdb", StringComparison.OrdinalIgnoreCase) || pair.Key.Equals("Tvdb", StringComparison.OrdinalIgnoreCase) || pair.Key.Equals("Douban", StringComparison.OrdinalIgnoreCase)) &&
                         value != null && Regex.IsMatch(value, @"^\d{1,12}$", RegexOptions.CultureInvariant);
                     if (valid) item.SetProviderId(pair.Key, value);
@@ -125,7 +125,7 @@ namespace StrmAssistant.Common
         private static int? Number(JsonObject json, string key) => json[key] is JsonValue value && value.TryGetValue<int>(out var number) && number >= 0 && number <= 100000 ? number : null;
         private static void ValidateIdentity(BaseItem item, JsonObject json)
         {
-            if ((item is Movie || item is Series || item is BoxSet) && json["id"] != null && json["id"].ToString() != item.GetProviderId(MetadataProviders.Tmdb))
+            if ((item is Movie || item is Series || item is BoxSet || item is Person) && json["id"] != null && json["id"].ToString() != item.GetProviderId(MetadataProviders.Tmdb))
                 throw new InvalidDataException("Metadata ID does not match the item");
             if (json["provider_ids"] is JsonObject ids)
                 foreach (var pair in ids)
@@ -182,7 +182,7 @@ namespace StrmAssistant.Common
                 if (json != null)
                 {
                     var cachedPeople = People(json);
-                    if (item is Movie || item is Series || item is BoxSet)
+                    if (item is Movie || item is Series || item is BoxSet || item is Person)
                     {
                         var id = json["id"]?.ToString();
                         if (id != null && id != item.GetProviderId(MetadataProviders.Tmdb)) throw new InvalidDataException("Metadata ID does not match the item");
@@ -206,4 +206,3 @@ namespace StrmAssistant.Common
         }
     }
 }
-

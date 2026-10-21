@@ -5,7 +5,7 @@
   "upstream_revision": "beb65cf8e4d7b19ce418c3aa32cfb6eff04acfb2",
   "build": "passed against exact official 4.10.1.0 assemblies",
   "assembly_rule_and_ffmpeg_checks_passed": 49,
-  "fixture_integration_and_contract_checks_passed": 132,
+  "fixture_integration_and_contract_checks_passed": 136,
   "integration_environment": "isolated official Windows Emby 4.10.1.0; generated media and disposable users",
   "notification_delivery": "recording sink; external delivery untested",
   "distributed_extraction": "real HTTP round trip within one fixture server; cross-host Linux untested",

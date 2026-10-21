@@ -24,11 +24,12 @@ internal static class MultiVersionChecks
             var collection = library.AddVirtualFolder("Version fixture " + index, "movies", new LibraryOptions
                 { EnableRealtimeMonitor = false, PathInfos = new[] { new MediaPathInfo { Path = folder } } }, false);
             libraries.Add(collection);
+            var physical = collection.GetPhysicalFolderItems(new MediaBrowser.Controller.Entities.InternalItemsQuery()).First();
             for (var version = 0; version < (index == 0 ? 2 : 1); version++)
             {
                 var path = Path.Combine(folder, "fixture-" + version + ".mp4"); File.Copy(Path.Combine(root, "movies", "fixture.mp4"), path);
                 var movie = new Movie { Id = Guid.NewGuid(), Name = "Version fixture", Path = path, RunTimeTicks = TimeSpan.FromSeconds(3).Ticks };
-                movie.SetParent(collection); movie.SetProviderId(MetadataProviders.Tmdb, "999999999"); library.CreateItem(movie, collection); movies.Add(movie);
+                movie.SetParent(physical); movie.SetProviderId(MetadataProviders.Tmdb, "999999999"); library.CreateItem(movie, physical); movies.Add(movie);
             }
         }
         var user = await users.CreateUser("film-index-version-fixture", new UserPolicy { EnableAllFolders = true, EnableAllDevices = true });
@@ -85,8 +86,3 @@ internal static class MultiVersionChecks
         }
     }
 }
-
-
-
-
-

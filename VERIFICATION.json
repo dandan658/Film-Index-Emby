@@ -4,8 +4,8 @@
   "target": "4.10.1.0",
   "upstream_revision": "beb65cf8e4d7b19ce418c3aa32cfb6eff04acfb2",
   "build": "passed against exact official 4.10.1.0 assemblies",
-  "assembly_rule_and_ffmpeg_checks_passed": 43,
-  "fixture_integration_and_contract_checks_passed": 66,
+  "assembly_rule_and_ffmpeg_checks_passed": 49,
+  "fixture_integration_and_contract_checks_passed": 117,
   "integration_environment": "isolated official Windows Emby 4.10.1.0; generated media and disposable users",
   "notification_delivery": "recording sink; external delivery untested",
   "distributed_extraction": "real HTTP round trip within one fixture server; cross-host Linux untested",
@@ -16,5 +16,9 @@
   "complete_installation_package_produced": false,
   "production_data_accessed": false,
   "windows_test_launch": "hidden; -service -noautorunwebapp; automatic exit after report",
-  "details": "DEVELOPMENT.md"
+  "details": "DEVELOPMENT.md",
+  "javascript_assertions_passed": 8,
+  "online_douban": "public page returned no usable JSON-LD; online acceptance remains incomplete",
+  "native_intro_import": "real native refresh and chapter database with deterministic intercepted public response; live upstream coverage untested",
+  "fingerprint_test": "two real generated audio/video files extracted concurrently with separate native 2 and 3 minute library settings"
 }

@@ -7,6 +7,7 @@ using System.ComponentModel;
 namespace StrmAssistant.Options
 {
     public enum VersionLabelMode { Native, MediaInfo, FileName }
+    public enum EpisodeViewStyle { Native, Primary, Thumb, List, Table }
     public class ExperienceEnhanceOptions : EditableOptionsBase
     {
         [DisplayNameL("ExperienceEnhanceOptions_EditorTitle_Experience_Enhance", typeof(Resources))]
@@ -19,6 +20,28 @@ namespace StrmAssistant.Options
         [DisplayName("中文标题搜索增强")]
         [Description("使用独立的内存标题索引支持简繁混搜和中文子串搜索；不更换 Emby 数据库分词器。索引建立期间使用原生搜索。")]
         public bool EnhancedChineseSearch { get; set; } = false;
+
+        [DisplayName("隐藏搜索页的最近搜索列表")]
+        public bool HideSearchRecommendations { get; set; } = false;
+        [DisplayName("节目卡片显示总集数")]
+        [Description("仅改变卡片上的数量，不修改任何观看记录。")]
+        public bool ShowTotalEpisodes { get; set; } = false;
+        [DisplayName("主屏幕显示媒体库数量标记")]
+        public bool ShowLibraryItemCounts { get; set; } = false;
+        [DisplayName("季按倒序显示")]
+        public bool DescendingSeasons { get; set; } = false;
+        [DisplayName("集按倒序显示")]
+        public bool DescendingEpisodes { get; set; } = false;
+        [DisplayName("网页端季显示样式")]
+        public EpisodeViewStyle SeasonViewStyle { get; set; } = EpisodeViewStyle.Native;
+        [DisplayName("网页端剧集显示样式")]
+        [Description("仅影响 Emby 网页端；修改后重新加载网页生效，不改写用户保存的显示偏好。")]
+        public EpisodeViewStyle EpisodeViewStyle { get; set; } = EpisodeViewStyle.Native;
+        [DisplayName("节目页面显示其季所属的合集")]
+        public bool IncludeSeasonCollections { get; set; } = false;
+        [DisplayName("日志按从新到旧显示")]
+        [Description("日志查看接口按日志条目倒序显示，错误堆栈内部保持原顺序；原始日志下载不变。")]
+        public bool NewestLogsFirst { get; set; } = false;
 
         [DisplayName("合集变更通知")]
         public bool NotifyCollectionChanges { get; set; } = false;

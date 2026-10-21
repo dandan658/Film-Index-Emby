@@ -1,0 +1,24 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const root = process.argv[2];
+if (!root || !path.basename(root).startsWith('film-index-integration-') || !fs.existsSync(path.join(root, '.fixture-only'))) throw Error('Fixture root required');
+const native = {imageType: 'thumb', fields: ['Name'], defaultFields: ['Name', 'Year'], tableDefaultFields: ['Name', 'Runtime']};
+function ListController(preset) { this.preset = preset; }
+ListController.prototype.getViewSettings = function () { return native; };
+ListController.prototype.getDisplayPreset = function () { return this.preset; };
+vm.runInNewContext(fs.readFileSync(path.join(root, 'presentation-injection.js'), 'utf8'), {ListController});
+const season = new ListController('Season').getViewSettings();
+const episode = new ListController('Episode').getViewSettings();
+const movie = new ListController('Movie').getViewSettings();
+assert.equal(season.imageType, 'primary');
+assert.deepEqual(Array.from(season.fields), ['Name', 'Year']);
+assert.equal(episode.imageType, 'datagrid');
+assert.deepEqual(Array.from(episode.fields), ['Name', 'Runtime']);
+assert.equal(movie, native);
+assert.equal(native.imageType, 'thumb');
+assert.deepEqual(native.fields, ['Name']);
+episode.fields.push('Modified');
+assert.deepEqual(native.tableDefaultFields, ['Name', 'Runtime']);
+console.log('8 JavaScript presentation assertions passed; native DOM rendering has not been browser-tested.');

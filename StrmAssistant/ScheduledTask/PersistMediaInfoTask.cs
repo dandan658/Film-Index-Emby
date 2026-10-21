@@ -22,7 +22,10 @@ namespace StrmAssistant
             _fileSystem = fileSystem;
         }
 
-        public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+            => ScheduledWork.Run(pending => ExecuteCore(cancellationToken, progress, pending), null);
+
+        private async Task ExecuteCore(CancellationToken cancellationToken, IProgress<double> progress, List<Task> pending)
         {
             _logger.Info("MediaInfoPersist - Scheduled Task Execute");
             _logger.Info("Tier2 Max Concurrent Count: " +
@@ -95,8 +98,8 @@ namespace StrmAssistant
                         var currentCount = Interlocked.Increment(ref current);
                         progress.Report(currentCount / total * 100);
                     }
-                }, cancellationToken);
-                tasks.Add(task);
+                }, CancellationToken.None);
+                tasks.Add(task); pending.Add(task);
                 Task.Delay(10).Wait();
             }
             await Task.WhenAll(tasks).ConfigureAwait(false);

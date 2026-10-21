@@ -49,6 +49,14 @@ namespace StrmAssistant.Common
             ["original_name"] = item.OriginalTitle, ["overview"] = item.Overview, ["tagline"] = item.Tagline,
             ["vote_average"] = item.CommunityRating, ["air_date"] = item.PremiereDate?.ToString("O"),
             ["production_year"] = item.ProductionYear,
+            ["official_rating"] = item.OfficialRating, ["critic_rating"] = item.CriticRating,
+            ["provider_ids"] = JsonSerializer.SerializeToNode(item.ProviderIds),
+            ["studios"] = JsonSerializer.SerializeToNode(item.Studios),
+            ["production_locations"] = JsonSerializer.SerializeToNode(item.ProductionLocations),
+            ["season_number"] = item is Episode episode ? episode.ParentIndexNumber : item is Season season ? season.IndexNumber : null,
+            ["episode_number"] = item is Episode ep ? ep.IndexNumber : null,
+            ["sort_episode_number"] = item is Episode sorted ? sorted.SortIndexNumber : null,
+            ["sort_season_number"] = item is Episode parentSorted ? parentSorted.SortParentIndexNumber : null,
             ["genres"] = JsonSerializer.SerializeToNode(item.Genres), ["tags"] = JsonSerializer.SerializeToNode(item.Tags)
         };
         public static JsonObject MergePatch(JsonObject original, JsonObject patch)
@@ -71,6 +79,7 @@ namespace StrmAssistant.Common
         public static void Apply(BaseItem item, JsonObject json)
         {
             if (item.IsLocked) return;
+            ValidateIdentity(item, json);
             bool Can(MetadataFields field) => item.LockedFields?.Contains(field) != true;
             if (Can(MetadataFields.Name) && Text(json, "title", "name") is string name && !string.IsNullOrWhiteSpace(name)) item.Name = name;
             if (Can(MetadataFields.OriginalTitle) && Text(json, "original_title", "original_name") is string original) item.OriginalTitle = original;
@@ -84,6 +93,44 @@ namespace StrmAssistant.Common
                 item.Genres = genres.Select(node => node is JsonObject genre ? Text(genre, "name") : StringValue(node)).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToArray();
             if (Can(MetadataFields.Tags) && json["tags"] is JsonArray tags)
                 item.Tags = tags.Select(StringValue).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToArray();
+            if (Can(MetadataFields.OfficialRating) && Text(json, "official_rating") is string official) item.OfficialRating = official;
+            if (Can(MetadataFields.CriticRating) && json["critic_rating"] is JsonValue critic && critic.TryGetValue<float>(out var score) && score >= 0 && score <= 100) item.CriticRating = score;
+            if (Can(MetadataFields.Studios) && json["studios"] is JsonArray studios) item.Studios = Strings(studios);
+            if (Can(MetadataFields.ProductionLocations) && json["production_locations"] is JsonArray locations) item.ProductionLocations = Strings(locations);
+            if (json["provider_ids"] is JsonObject ids)
+                foreach (var pair in ids)
+                {
+                    var value = StringValue(pair.Value);
+                    // Import only identifiers, never arbitrary URLs or unknown provider-specific settings.
+                    var valid = pair.Key.Equals("Imdb", StringComparison.OrdinalIgnoreCase) ? IntroDbRules.ValidImdb(value) :
+                        (pair.Key.Equals("Tmdb", StringComparison.OrdinalIgnoreCase) || pair.Key.Equals("Tvdb", StringComparison.OrdinalIgnoreCase) || pair.Key.Equals("Douban", StringComparison.OrdinalIgnoreCase)) &&
+                        value != null && Regex.IsMatch(value, @"^\d{1,12}$", RegexOptions.CultureInvariant);
+                    if (valid) item.SetProviderId(pair.Key, value);
+                }
+            if (item is Episode ordered)
+            {
+                if (Can(MetadataFields.SortIndexNumber) && Number(json, "sort_episode_number") is int index) ordered.SortIndexNumber = index;
+                if (Can(MetadataFields.SortParentIndexNumber) && Number(json, "sort_season_number") is int parent) ordered.SortParentIndexNumber = parent;
+            }
+        }
+        private static string[] Strings(JsonArray values) => values.Select(StringValue).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToArray();
+        private static int? Number(JsonObject json, string key) => json[key] is JsonValue value && value.TryGetValue<int>(out var number) && number >= 0 && number <= 100000 ? number : null;
+        private static void ValidateIdentity(BaseItem item, JsonObject json)
+        {
+            if ((item is Movie || item is Series || item is BoxSet) && json["id"] != null && json["id"].ToString() != item.GetProviderId(MetadataProviders.Tmdb))
+                throw new InvalidDataException("Metadata ID does not match the item");
+            if (json["provider_ids"] is JsonObject ids)
+                foreach (var pair in ids)
+                {
+                    var existing = item.GetProviderId(pair.Key);
+                    if (!string.IsNullOrEmpty(existing) && StringValue(pair.Value) is string value && existing != value)
+                        throw new InvalidDataException("Cached provider identity conflicts with the item");
+                }
+            var season = item is Episode ep ? ep.ParentIndexNumber : item is Season s ? s.IndexNumber : null;
+            if (season.HasValue && Number(json, "season_number") is int actualSeason && actualSeason != season)
+                throw new InvalidDataException("Cached season identity conflicts with the item");
+            if (item is Episode episode && Number(json, "episode_number") is int actualEpisode && actualEpisode != episode.IndexNumber)
+                throw new InvalidDataException("Cached episode identity conflicts with the item");
         }
         public static async Task<bool> Process(BaseItem item, CancellationToken token)
         {

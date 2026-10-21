@@ -28,7 +28,10 @@ namespace StrmAssistant.ScheduledTask
             _taskManager = taskManager;
         }
 
-        public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+            => ScheduledWork.Run(pending => ExecuteCore(cancellationToken, progress, pending), () => IsRunning = false);
+
+        private async Task ExecuteCore(CancellationToken cancellationToken, IProgress<double> progress, List<Task> pending)
         {
             _logger.Info("IntroFingerprintExtract - Scheduled Task Execute");
             
@@ -211,8 +214,8 @@ namespace StrmAssistant.ScheduledTask
                                     $"IntroFingerprintExtract - Episode Progress {currentCount}/{totalEpisodes} - Task {taskEpisodeIndex}: {taskEpisode.Path}");
                             }
                         }
-                    }, cancellationToken);
-                    episodeTasks.Add(task);
+                    }, CancellationToken.None);
+                    episodeTasks.Add(task); pending.Add(task);
                 }
 
                 if (cancellationToken.IsCancellationRequested)
@@ -297,8 +300,8 @@ namespace StrmAssistant.ScheduledTask
                                 $"IntroFingerprintExtract - Season Progress {currentCount}/{totalSeasons} - Task {taskSeasonIndex}: {taskSeason.Path}");
                         }
                     }
-                }, cancellationToken);
-                seasonTasks.Add(seasonTask);
+                }, CancellationToken.None);
+                seasonTasks.Add(seasonTask); pending.Add(seasonTask);
             }
 
             await Task.WhenAll(seasonTasks).ConfigureAwait(false);

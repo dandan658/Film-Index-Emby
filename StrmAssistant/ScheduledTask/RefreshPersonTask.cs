@@ -31,7 +31,10 @@ namespace StrmAssistant.ScheduledTask
             _libraryManager = libraryManager;
         }
 
-        public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+            => ScheduledWork.Run(pending => ExecuteCore(cancellationToken, progress, pending), () => IsRunning = false);
+
+        private async Task ExecuteCore(CancellationToken cancellationToken, IProgress<double> progress, List<Task> pending)
         {
             _logger.Info("RefreshPerson - Scheduled Task Execute");
             await Task.Yield();
@@ -250,9 +253,9 @@ namespace StrmAssistant.ScheduledTask
                             progress.Report(currentCount / total * 100);
                             _logger.Info("RefreshPerson - Task " + currentCount + "/" + total + " - " + taskItem.Name);
                         }
-                    }, cancellationToken);
+                    }, CancellationToken.None);
 
-                    tasks.Add(task);
+                    tasks.Add(task); pending.Add(task);
                     Task.Delay(10).Wait();
                 }
                 await Task.WhenAll(tasks).ConfigureAwait(false);

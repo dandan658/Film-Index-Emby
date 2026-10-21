@@ -45,13 +45,18 @@ namespace StrmAssistant.Provider
                 if (season < 0 || episode <= 0 || !season.HasValue || !episode.HasValue || tv.IndexNumberEnd > episode) return ItemUpdateType.None;
                 imdb = tv.Series?.GetProviderId(MetadataProviders.Imdb);
             }
-            if (!IntroDbRules.ValidImdb(imdb)) return ItemUpdateType.None;
-            var json = await IntroDbClient.Get(imdb, season, episode, token).ConfigureAwait(false);
+            var alternate = settings.IntroDbSource == StrmAssistant.Options.PublicIntroSource.TheIntroDb;
+            BaseItem identityOwner = item is Episode episodeItem ? episodeItem.Series : item;
+            var tvdb = identityOwner?.GetProviderId(MetadataProviders.Tvdb);
+            if (!alternate && !IntroDbRules.ValidImdb(imdb)) return ItemUpdateType.None;
+            var json = alternate ? await IntroDbClient.GetTheIntroDb(tvdb, season, episode, item.GetProviderId(MetadataProviders.Tvdb), item.RunTimeTicks.Value, token).ConfigureAwait(false) :
+                await IntroDbClient.Get(imdb, season, episode, token).ConfigureAwait(false);
             if (json == null) return ItemUpdateType.None;
             var chapters = result.Chapters ?? repository.GetChapters(item);
             try
             {
-                var merged = IntroDbRules.Merge(json, imdb, season, episode, item.RunTimeTicks.Value, chapters, options.ReplaceAllMetadata);
+                var merged = alternate ? IntroDbRules.MergeTheIntroDb(json, tvdb, season, episode, item.RunTimeTicks.Value, chapters, options.ReplaceAllMetadata) :
+                    IntroDbRules.Merge(json, imdb, season, episode, item.RunTimeTicks.Value, chapters, options.ReplaceAllMetadata);
                 if (merged.Count == chapters.Count && merged.Zip(chapters, (a,b) => a.MarkerType == b.MarkerType && a.StartPositionTicks == b.StartPositionTicks).All(same => same)) return ItemUpdateType.None;
                 result.Chapters = merged;
                 return ItemUpdateType.MetadataDownload;

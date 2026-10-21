@@ -34,6 +34,23 @@ internal static class IntroDbTests
             "IntroDB replaces existing markers only on explicit replacement");
         check(Merge(json.Replace("\"intro\":", "\"no_intro\":true,\"intro\":")).Count == 1,
             "IntroDB respects a confirmed no-intro result");
+        check(Merge(json.Replace("2500", "\"2500\"")).Count == 1 && Merge(json.Replace("\"season\":1", "\"season\":\"1\"")).Count == 0,
+            "Malformed numeric marker fields preserve existing processing without throwing");
+        var alternate = rules.GetMethod("MergeTheIntroDb")!;
+        const string second = """{"tvdb_id":81189,"type":"tv","season":1,"episode":2,"group_duration_ms":120000,"intro":[{"start_ms":null,"end_ms":58000}],"credits":[{"start_ms":110000,"end_ms":null}]}""";
+        IList Alternate(string text, string id = "81189", object? existing = null) =>
+            (IList)alternate.Invoke(null, new object[] { text, id, 1, 2, TimeSpan.FromSeconds(120).Ticks, existing ?? empty, false })!;
+        var imported = Alternate(second);
+        check(imported.Count == 3 && (long)ticks.GetValue(imported[0])! == 0,
+            "TheIntroDB v4 imports exact TVDB release markers and null boundary semantics");
+        check(Alternate(second, "81188").Count == 0 && Alternate(second.Replace("\"episode\":2", "\"episode\":3")).Count == 0,
+            "TheIntroDB rejects another TVDB title or episode");
+        check(Alternate(second.Replace("120000", "130000")).Count == 0 && Alternate(second.Replace("120000", "null")).Count == 0,
+            "TheIntroDB requires a duration-matched known release group");
+        check(Alternate(second.Replace("[{\"start_ms\":null,\"end_ms\":58000}]", "[{\"start_ms\":0,\"end_ms\":10000},{\"start_ms\":20000,\"end_ms\":58000}]")).Count == 1,
+            "Disjoint intros are not silently collapsed into Emby's single intro pair");
+        check(Alternate(second, existing: valid).Count == valid.Count && (long)ticks.GetValue(Alternate(second, existing: valid)[0])! == (long)ticks.GetValue(valid[0])!,
+            "TheIntroDB preserves manually existing markers by default");
         var distributed = built.GetType("StrmAssistant.Common.DistributedRules", true)!;
         var allows = distributed.GetMethod("AllowsFile")!;
         var root = Path.Combine(Path.GetTempPath(), "film-index-rules");

@@ -9,7 +9,7 @@ internal static class DependencyLoader
     internal static void Initialize()
     {
         var context = AssemblyLoadContext.GetLoadContext(typeof(DependencyLoader).Assembly);
-        if (context != null) context.Resolving += (_, name) => name.Name == "FilmIndex.Emby"
-            ? AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == "FilmIndex.Emby") : null;
+        if (context != null) context.Resolving += (_, name) => name.Name == "FilmIndex.Emby" || name.Name == "0Harmony"
+            ? AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.GetName().Name == name.Name) : null;
     }
 }

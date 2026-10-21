@@ -75,5 +75,31 @@ internal static class LocalMetadataChecks
         options.MetadataEnhanceOptions.LocalMetadataMode = LocalMetadataMode.Off; save(options);
         movie.Name = "Off title";
         check(!await LocalMetadataStore.Process(movie, CancellationToken.None) && movie.Name == "Off title", "Disabling local metadata leaves native metadata processing unchanged");
+        var extended = JsonNode.Parse("""{"provider_ids":{"Imdb":"tt1234567","Douban":"12345678","Unknown":"untrusted"},"official_rating":"PG-13","critic_rating":92,"studios":["Fixture studio"],"production_locations":["China"]}""")!.AsObject();
+        LocalMetadataStore.Apply(movie, extended);
+        library.UpdateItem(movie, movie.Parent, ItemUpdateType.MetadataImport);
+        var persisted = (Movie)library.GetItemById(movie.Id);
+        check(persisted.GetProviderId(MetadataProviders.Imdb) == "tt1234567" && persisted.GetProviderId("Douban") == "12345678" &&
+            persisted.GetProviderId("Unknown") == null && persisted.OfficialRating == "PG-13" && persisted.CriticRating == 92 && persisted.Studios.Contains("Fixture studio") && persisted.ProductionLocations.Contains("China"),
+            "Local cache restores known external IDs, ratings, studios and production locations through the native database");
+        var beforeConflict = movie.Name;
+        var rejected = false;
+        try { LocalMetadataStore.Apply(movie, JsonNode.Parse("""{"name":"Wrong title","provider_ids":{"Imdb":"tt7654321"}}""")!.AsObject()); }
+        catch (InvalidDataException) { rejected = true; }
+        check(rejected && movie.Name == beforeConflict && movie.GetProviderId(MetadataProviders.Imdb) == "tt1234567",
+            "Conflicting cached external identity is rejected before any metadata is changed");
+        movie.LockedFields = new[] { MetadataFields.OfficialRating, MetadataFields.CriticRating, MetadataFields.Studios, MetadataFields.ProductionLocations };
+        LocalMetadataStore.Apply(movie, JsonNode.Parse("""{"official_rating":"R","critic_rating":2,"studios":["Wrong"],"production_locations":["Wrong"]}""")!.AsObject());
+        check(movie.OfficialRating == "PG-13" && movie.CriticRating == 92 && movie.Studios.Contains("Fixture studio") && movie.ProductionLocations.Contains("China"),
+            "Extended local metadata respects each native rating, studio and location field lock");
+        movie.LockedFields = Array.Empty<MetadataFields>();
+        var special = new MediaBrowser.Controller.Entities.TV.Episode { ParentIndexNumber = 0, IndexNumber = 2 };
+        LocalMetadataStore.Apply(special, JsonNode.Parse("""{"season_number":0,"episode_number":2,"sort_episode_number":3,"sort_season_number":1}""")!.AsObject());
+        check(special.SortIndexNumber == 3 && special.SortParentIndexNumber == 1 && special.ParentIndexNumber == 0 && special.IndexNumber == 2,
+            "Special-episode display ordering restores without changing actual season or episode identity");
+        rejected = false;
+        try { LocalMetadataStore.Apply(special, JsonNode.Parse("""{"name":"Wrong episode","season_number":1,"episode_number":2}""")!.AsObject()); }
+        catch (InvalidDataException) { rejected = true; }
+        check(rejected && special.Name != "Wrong episode", "Local metadata rejects a season mismatch before changing episode fields");
     }
 }

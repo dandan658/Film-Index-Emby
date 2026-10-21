@@ -15,7 +15,10 @@ namespace StrmAssistant.ScheduledTask
     {
         private readonly ILogger _logger = Plugin.Instance.Logger;
 
-        public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+            => ScheduledWork.Run(pending => ExecuteCore(cancellationToken, progress, pending), () => IsRunning = false);
+
+        private async Task ExecuteCore(CancellationToken cancellationToken, IProgress<double> progress, List<Task> pending)
         {
             _logger.Info("MediaInfoExtract - Scheduled Task Execute");
 
@@ -136,8 +139,8 @@ namespace StrmAssistant.ScheduledTask
                                 $"MediaInfoExtract - Progress {currentCount}/{total} - Task {taskIndex}: {taskItem.Path}");
                         }
                     }
-                }, cancellationToken);
-                tasks.Add(task);
+                }, CancellationToken.None);
+                tasks.Add(task); pending.Add(task);
             }
             await Task.WhenAll(tasks).ConfigureAwait(false);
 

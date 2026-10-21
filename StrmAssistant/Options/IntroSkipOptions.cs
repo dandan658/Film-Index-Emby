@@ -8,8 +8,12 @@ using System.ComponentModel;
 
 namespace StrmAssistant.Options
 {
+    public enum PublicIntroSource { IntroDbApp, TheIntroDb }
     public class IntroSkipOptions : EditableOptionsBase
     {
+        [DisplayName("公开片头数据来源")]
+        [Description("IntroDB.app 使用 IMDb 编号；TheIntroDB 使用 TVDB 编号和官方季集顺序。两个来源独立，不混用编号。")]
+        public PublicIntroSource IntroDbSource { get; set; } = PublicIntroSource.IntroDbApp;
         [DisplayName("从 IntroDB 获取片头片尾标记")]
         [Description("使用公开片头片尾数据；只按 IMDb ID 和季集号精确匹配。默认保留已有标记。")]
         public bool EnableIntroDb { get; set; } = false;

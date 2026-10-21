@@ -9,3 +9,5 @@ x64/
 build/
 [Bb]in/
 [Oo]bj/
+
+/tests/last-fixture-root.txt

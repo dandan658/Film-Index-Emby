@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Globalization;
 
 namespace StrmAssistant.Common
 {
@@ -17,12 +18,24 @@ namespace StrmAssistant.Common
         {
             if (!IntroDbRules.ValidImdb(imdb) || DateTimeOffset.UtcNow.UtcTicks < Interlocked.Read(ref _retryAfterTicks)) return null;
             var query = "imdb_id=" + imdb + (season.HasValue ? "&season=" + season + "&episode=" + episode : "&is_movie=true");
+            return await GetUrl("https://api.introdb.app/segments?" + query, token).ConfigureAwait(false);
+        }
+        public static Task<string> GetTheIntroDb(string tvdb, int? season, int? episode, string episodeId, long runtime, CancellationToken token)
+        {
+            if (!IntroDbRules.ValidTvdb(tvdb) || runtime <= 0 || season.HasValue && (!IntroDbRules.ValidTvdb(episodeId) || season < 0 || !episode.HasValue || episode <= 0)) return Task.FromResult<string>(null);
+            var query = "tvdb_id=" + tvdb + "&type=" + (season.HasValue ? "tv" : "movie") + "&details=true&merge_unknown=false&duration_ms=" + (runtime / TimeSpan.TicksPerMillisecond).ToString(CultureInfo.InvariantCulture);
+            if (season.HasValue) query += "&season=" + season + "&episode=" + episode + "&mapping=official&tvdb_episode_id=" + episodeId;
+            return GetUrl("https://api.theintrodb.org/v4/media?" + query, token);
+        }
+        private static async Task<string> GetUrl(string query, CancellationToken token)
+        {
+            if (DateTimeOffset.UtcNow.UtcTicks < Interlocked.Read(ref _retryAfterTicks)) return null;
             if (Cache.TryGetValue(query, out var cached) && cached.Until > DateTimeOffset.UtcNow) return cached.Json;
             await Slots.WaitAsync(token).ConfigureAwait(false);
             try
             {
                 if (Cache.TryGetValue(query, out cached) && cached.Until > DateTimeOffset.UtcNow) return cached.Json;
-                using var response = await Client.GetAsync("https://api.introdb.app/segments?" + query, token).ConfigureAwait(false);
+                using var response = await Client.GetAsync(query, token).ConfigureAwait(false);
                 if (response.StatusCode == HttpStatusCode.TooManyRequests)
                 { Interlocked.Exchange(ref _retryAfterTicks, DateTimeOffset.UtcNow.AddMinutes(5).UtcTicks); return null; }
                 if (response.StatusCode != HttpStatusCode.NotFound) response.EnsureSuccessStatusCode();

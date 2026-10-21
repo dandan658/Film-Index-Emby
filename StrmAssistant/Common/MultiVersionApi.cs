@@ -52,6 +52,9 @@ namespace StrmAssistant.Common
             if (!Plugin.Instance.GetPluginOptions().ExperienceEnhanceOptions.SeparateLibraryProgress ||
                 __instance is not Movie && __instance is not Episode || string.IsNullOrEmpty(__result)) return;
             if (__result.Contains("|filmindex-library:", StringComparison.Ordinal)) return;
+            var library = BaseItem.LibraryManager.GetCollectionFolders(__instance, __0, System.Threading.CancellationToken.None)
+                .OfType<CollectionFolder>().OrderBy(folder => folder.InternalId).FirstOrDefault();
+            if (library != null) { __result += "|filmindex-library:" + library.Id.ToString("N"); return; }
             var parent = __instance.GetParent(__0);
             for (var depth = 0; parent != null && depth < 128; depth++, parent = parent.GetParent(__0))
                 if (parent is CollectionFolder)

@@ -307,7 +307,7 @@ namespace StrmAssistant.Common
 
                                     MasterSemaphore.Release();
                                 }
-                            }, cancellationToken);
+                            }, CancellationToken.None);
                             tasks.Add(task);
                         }
 
@@ -527,7 +527,7 @@ namespace StrmAssistant.Common
 
                                         MasterSemaphore.Release();
                                     }
-                                }, cancellationToken);
+                                }, CancellationToken.None);
                                 episodeTasks.Add(task);
                             }
 
@@ -590,7 +590,7 @@ namespace StrmAssistant.Common
                                     {
                                         Tier2Semaphore.Release();
                                     }
-                                }, cancellationToken);
+                                }, CancellationToken.None);
                                 seasonTasks.Add(seasonTask);
                             }
                         }
@@ -788,7 +788,7 @@ namespace StrmAssistant.Common
                                 {
                                     Tier2Semaphore.Release();
                                 }
-                            }, cancellationToken);
+                            }, CancellationToken.None);
                             tasks.Add(task);
                         }
 

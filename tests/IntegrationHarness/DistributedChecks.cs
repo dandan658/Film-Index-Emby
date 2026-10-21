@@ -83,6 +83,24 @@ internal static class DistributedChecks
             var local = await probe.GetMediaInfo(new MediaInfoRequest { MediaType = DlnaProfileType.Video,
                 MediaSource = new MediaSourceInfo { Path = item.Path, Protocol = MediaProtocol.File } }, CancellationToken.None);
             check(fallback == null && local.MediaStreams.Count > 0, "Unavailable worker falls back without leaving remote data in the local probe scope");
+            var logPath = Path.Combine(Plugin.Instance.ApplicationPaths.LogDirectoryPath, "film-index-log-fixture.txt");
+            await File.WriteAllTextAsync(logPath, "2026-10-21 10:00:01 Info First\n2026-10-21 10:00:02 Error Second\n  stack line A\n  stack line B\n2026-10-21 10:00:03 Info Third\n");
+            options.ExperienceEnhanceOptions.NewestLogsFirst = true; save(options);
+            using (var response = await client.GetAsync("System/Logs/film-index-log-fixture.txt/Lines?StartIndex=0&Limit=2&Sanitize=true"))
+            {
+                response.EnsureSuccessStatusCode();
+                using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                var entries = document.RootElement.GetProperty("Items");
+                check(entries.GetArrayLength() == 2 && entries[0].GetString()!.Contains("Third") && entries[1].GetString()!.IndexOf("stack line A") < entries[1].GetString()!.IndexOf("stack line B"),
+                    "Authenticated native log API returns newest entries first and preserves stack trace order");
+                check(document.RootElement.GetProperty("TotalRecordCount").GetInt32() == 3, "Newest-first log API reports the full logical entry count");
+            }
+            using (var raw = await client.GetAsync("System/Logs/film-index-log-fixture.txt?Sanitize=true"))
+            {
+                raw.EnsureSuccessStatusCode(); var text = await raw.Content.ReadAsStringAsync();
+                check(text.IndexOf("First") < text.IndexOf("Third"), "Downloading the original log retains chronological order");
+            }
+            options.ExperienceEnhanceOptions.NewestLogsFirst = false; save(options);
         }
         finally
         {

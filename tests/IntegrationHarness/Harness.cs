@@ -33,11 +33,14 @@ public sealed class Harness : IServerEntryPoint
     private readonly IUserDataManager _userdata;
     private readonly IHttpClient _http;
     private readonly MediaBrowser.Controller.MediaEncoding.IMediaProbeManager _probe;
+    private readonly MediaBrowser.Controller.Dto.IDtoService _dto;
+    private readonly MediaBrowser.Controller.Collections.ICollectionManager _collections;
     private readonly List<string> _checks = new();
     public Harness(ILibraryManager library, IItemRepository repository, IFileSystem files,
         IUserManager users, ILogManager logs, IProviderManager providers, IUserDataManager userdata, IHttpClient http,
-        MediaBrowser.Controller.MediaEncoding.IMediaProbeManager probe)
-    { _library = library; _repository = repository; _files = files; _users = users; _logger = logs.GetLogger("FilmIndexIntegration"); _providers = providers; _userdata = userdata; _http = http; _probe = probe; }
+        MediaBrowser.Controller.MediaEncoding.IMediaProbeManager probe, MediaBrowser.Controller.Dto.IDtoService dto,
+        MediaBrowser.Controller.Collections.ICollectionManager collections)
+    { _library = library; _repository = repository; _files = files; _users = users; _logger = logs.GetLogger("FilmIndexIntegration"); _providers = providers; _userdata = userdata; _http = http; _probe = probe; _dto = dto; _collections = collections; }
 
     public void Run()
     {
@@ -173,6 +176,15 @@ public sealed class Harness : IServerEntryPoint
             await MultiVersionChecks.Run(root, _library, _users, _userdata, _files, options, SaveOptions, Check);
             await LocalMetadataChecks.Run(root, movie, _library, _files, _providers, options, SaveOptions, Check);
             NotificationChecks.Run(movie, _library, options, SaveOptions, Check);
+            await PresentationChecks.Run(root, _library, _users, _userdata, _dto, _collections, options, SaveOptions, Check);
+            await MetadataLanguageChecks.Run(root, _library, _providers, options, SaveOptions, Check);
+            await SubtitleChecks.Run(root, Check);
+            await IntroDbChecks.Run(root, _library, _repository, _providers, _files, options, SaveOptions, Check);
+            await WebPresentationChecks.Run(root, options, SaveOptions, Check);
+            await DoubanChecks.Run(root, movie, _library, _providers, _files, options, SaveOptions, Check);
+            await ArtworkChecks.Run(movie, _providers, options, SaveOptions, Check);
+            await FingerprintChecks.Run(root, _library, _repository, options, SaveOptions, Check);
+            await CancellationChecks.Run(Check);
             await File.WriteAllTextAsync(Path.Combine(root, "report.json"), JsonSerializer.Serialize(new { success = true, checks = _checks }));
         }
         catch (Exception error)

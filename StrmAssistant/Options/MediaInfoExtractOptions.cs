@@ -11,6 +11,9 @@ namespace StrmAssistant.Options
 {
     public class MediaInfoExtractOptions : EditableOptionsBase
     {
+        [DisplayName("STRM 字幕按 IMDb 和季集信息搜索")]
+        [Description("避免把 STRM 文本当作视频计算哈希。远程视频使用 IMDb/季集信息匹配；原生字幕账号和下载权限保持有效。")]
+        public bool OptimizeStrmSubtitleSearch { get; set; } = false;
         [DisplayNameL("PluginOptions_EditorTitle_Strm_Extract", typeof(Resources))]
         public override string EditorTitle => Resources.PluginOptions_EditorTitle_Strm_Extract;
 

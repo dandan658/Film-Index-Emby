@@ -1,0 +1,1 @@
+8 JavaScript presentation assertions passed; native DOM rendering has not been browser-tested.

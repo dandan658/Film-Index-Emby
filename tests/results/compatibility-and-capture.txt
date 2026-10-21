@@ -34,6 +34,12 @@ PASS: IntroDB rejects negative timestamps while accepting a valid independent cr
 PASS: IntroDB preserves existing markers by default
 PASS: IntroDB replaces existing markers only on explicit replacement
 PASS: IntroDB respects a confirmed no-intro result
+PASS: Malformed numeric marker fields preserve existing processing without throwing
+PASS: TheIntroDB v4 imports exact TVDB release markers and null boundary semantics
+PASS: TheIntroDB rejects another TVDB title or episode
+PASS: TheIntroDB requires a duration-matched known release group
+PASS: Disjoint intros are not silently collapsed into Emby's single intro pair
+PASS: TheIntroDB preserves manually existing markers by default
 PASS: Distributed root checks reject sibling prefixes and parent traversal
 PASS: FFmpeg captures real video using quoted file paths
 PASS: FFmpeg captures portrait framing
@@ -41,4 +47,4 @@ PASS: Failed capture preserves the previous image
 PASS: Capture cancellation propagates without replacing the image
 PASS: Stalled remote media times out and its FFmpeg process exits
 PASS: Capture temporary JPEG files are removed
-43 checks passed. These are assembly compatibility checks, not media-library integration tests.
+49 checks passed. These are assembly compatibility checks, not media-library integration tests.

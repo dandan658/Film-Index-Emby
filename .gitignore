@@ -11,3 +11,4 @@ build/
 [Oo]bj/
 
 /tests/last-fixture-root.txt
+/packaging/__pycache__/

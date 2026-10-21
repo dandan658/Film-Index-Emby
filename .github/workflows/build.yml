@@ -1,38 +1,16 @@
-name: Build Plugin
-
+name: Source checks
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - tab-ui
-      - simple-ui
-      - lite
-  pull_request:
-    branches:
-      - tab-ui
-      - simple-ui
-      - lite
-
+    branches: [main]
 jobs:
-  build:
-    runs-on: windows-latest
-
+  source-checks:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '6.x'
-
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build the project
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: StrmAssistant
-          path: C:\Users\runneradmin\AppData\Roaming\Emby-Server\programdata\plugins\StrmAssistant${{ github.ref_name == 'lite' && 'Lite' || '' }}.dll
+      - uses: actions/checkout@v4
+      - name: Check installer shell syntax
+        run: sh -n packaging/film-index.sh
+      - name: Check packaging and test Python syntax
+        run: python -m py_compile packaging/build-package.py tests/installer-tests.py
+      - name: Explain server integration coverage
+        run: echo 'Exact Emby runtime checks are recorded under tests/results; this source-only job is not fnOS certification.'

@@ -14,6 +14,8 @@
   "full_pro_feature_parity": false,
   "ready_for_installation": false,
   "complete_installation_package_produced": false,
+  "preview_installation_package_produced": true,
+  "release_tag": "v0.1.0-preview.1",
   "production_data_accessed": false,
   "windows_test_launch": "hidden; -service -noautorunwebapp; automatic exit after report",
   "details": "DEVELOPMENT.md",

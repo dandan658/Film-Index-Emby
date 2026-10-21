@@ -38,7 +38,7 @@ Notifications use a recording native-interface sink; external delivery is untest
 
 Local unencrypted Blu-ray UDF ISO/BDMV extraction now reads the main MPLS playlist, exact duration, chapters and PID-bound language tags without extracting the video files. Real self-authored discs exercise the native probe normalizer, database persistence, selected-playlist cover capture and recovery sidecar. A repeated-timestamp sample demonstrates a native MPEG-TS estimate near 10 seconds versus the correct 185-second MPLS duration. Bad-image preflight preserves existing records and avoids misleading sidecars. Optional managed DiscUtils 0.16.13 dependencies are embedded with their MIT notice; tsMuxer 2.7.0 is a test-only fixture author. HTTP ISO is explicitly skipped; DVD, complex DV P7 and native disc chapter/BIF capture remain incomplete.
 
-Installer draft and file-manager instructions are in `packaging/`. Installation checks SHA-256 and saves previous DLL/settings; rollback verifies backups and first preserves the replaced version. These are plugin-only backups, not native database backups. Full Emby data snapshots must be taken with the server stopped before changes that affect database content. No complete archive is released.
+Installer draft and file-manager instructions are in `packaging/`. Installation checks SHA-256 and saves previous DLL/settings; rollback verifies backups and first preserves the replaced version. These are plugin-only backups, not native database backups. Full Emby data snapshots must be taken with the server stopped before changes that affect database content. A preview installation archive is released for user acceptance; it is not full feature parity.
 ## Remaining work — release is NOT complete
 
 1. HTTP ISO, DVD, advanced DV P7, multi-angle/complex disc acceptance, custom encoder chapter/BIF paths and broader disc fixtures.
@@ -48,7 +48,7 @@ Installer draft and file-manager instructions are in `packaging/`. Installation 
 5. Actual OpenSubtitles download, notification delivery and native DOM/client UI acceptance.
 6. Linux/fnOS verification, full archive/license/source/hash validation and installation/rollback acceptance on fnOS.
 
-**No complete installation archive is produced or delivered. Do not relabel this checkpoint as full parity.**
+**A v0.1.0-preview.1 installation archive is published at the user's request for testing. Full feature parity and fnOS certification remain incomplete.**
 
 ## Reproduction
 

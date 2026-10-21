@@ -1,66 +1,36 @@
-# Film Index Emby — 开发中
+# Film Index Emby
 
-本工作副本是面向 Emby 4.10.1.0 的社区源码派生项目，尚未完成全部目标功能，也没有发布完整安装包。
-实际实现、测试范围和待办请查看 [DEVELOPMENT.md](DEVELOPMENT.md) 与 [VERIFICATION.json](VERIFICATION.json)。
-下方保留上游介绍，不代表本派生版本的全部功能已经适配或通过验证。
-# Emby神医助手
+面向 **Emby 4.10.1.0** 的独立 GPL 社区源码派生插件。
 
-![logo](StrmAssistant/Properties/thumb.png "logo")
+当前发布 **v0.1.0-preview.1**，供用户安装测试；不代表全部目标功能完成或飞牛 Docker 已验证。插件不修改任何授权状态。
 
-## [[English]](README.en.md)
+## 下载和安装
 
-## 用途
+[直接下载安装包](https://github.com/dandan658/Film-Index-Emby/releases/download/v0.1.0-preview.1/FilmIndex.Emby-v0.1.0-preview.1-emby4.10.1.0.zip)
 
-1. 提高首次播放的起播速度
-2. 视频截图预览缩略图增强
-3. 片头片尾探测增强
-4. 自动合并同目录视频为多版本
-5. 独占模式提取媒体信息
-6. 独立的外挂字幕扫描
-7. 自定义刮削备选语言
-8. 使用替代`TMDB`配置
-9. 演职人员增强`TMDB`
-10. 获取原语言海报
-11. 中文搜索增强
-12. 拼音首字母排序
-13. 媒体信息持久化
-14. 支持代理服务器
-15. 支持`TMDB`剧集组刮削
+[全部发布文件、源码与校验值](https://github.com/dandan658/Film-Index-Emby/releases/tag/v0.1.0-preview.1)
 
-## 安装与使用说明请查看 [Wiki](https://github.com/sjtuross/StrmAssistant/wiki)
+飞牛 Docker 无需终端：停止 Emby 容器，完整备份 Emby 数据目录，将旧 StrmAssistant 插件移到 plugins 目录外，再把包中的 **FilmIndex.Emby.dll** 放进 Emby 数据目录的 **plugins** 子目录，最后启动原容器。不需要更换 Emby 镜像或新建容器。
 
-## 赞赏
+详细安装、升级和回退步骤见 [安装说明](packaging/INSTALL.zh-CN.md)。包内包含安装脚本、许可证、完整对应源码和 SHA-256 校验值。不要复制测试 DLL 或服务器 DLL。
 
-如果这个项目对你有帮助，不妨请我喝杯咖啡。如果你欣赏这个项目，欢迎为它点亮一颗⭐️。感谢你对开源精神的认可与支持！
+## 本版范围
 
-![donate](donate.png "donate")
+已实现媒体信息提取及持久化、字幕/外挂音轨扫描、中文搜索、元数据缓存与覆盖、人物简介和头像缓存、本地未加密蓝光 ISO/BDMV 提取、截图、片头数据导入、指纹提取、版本管理和部分客户端显示增强等。实际覆盖以 [开发记录](DEVELOPMENT.md)、[验证清单](VERIFICATION.json) 和 tests/results 为准。
 
-## 声明
+136 项隔离 Windows Emby 集成/契约检查、49 项兼容/规则/FFmpeg 检查、17 项 Windows BusyBox 安装回退检查和 8 项 JavaScript 断言通过。测试数量不是功能完成度；飞牛/Linux 实机兼容性由后续测试确认。
 
-本项目为开源项目，与 Emby LLC 没有任何关联，也未获得 Emby LLC 的授权或认可。本项目的目的是为合法购买并安装了 Emby 软件的用户提供额外的功能增强和使用便利。
+远程 HTTP ISO、DVD、复杂 DV P7、部分豆瓣高级刮削、剧集组及部分高级行为尚未完成；在线字幕下载、外部通知和部分客户端效果仍待实际账号或部署环境验收。请先在备份或测试媒体库中使用。
 
-### 使用须知
+## 源码和构建
 
-1. **合法使用**  
-   本项目仅适用于合法安装和使用 Emby 软件的用户。使用本项目时，用户需自行确保遵守 Emby 软件的服务条款和使用许可协议。
+本仓库保留社区上游历史与许可证，基线为 `beb65cf8e4d7b19ce418c3aa32cfb6eff04acfb2`。上游：[sjtuross/StrmAssistant](https://github.com/sjtuross/StrmAssistant)。原说明保存在 docs/，其功能列表不代表本版已全部支持。
 
-2. **非商业用途**  
-   本项目完全免费，仅限个人学习、研究和非商业用途。严禁将本项目或其衍生版本用于任何商业用途。
+使用 .NET 8 及官方 Emby 4.10.1.0 system 目录作为引用：
 
-3. **不包含 Emby 专有组件**  
-   本项目未包含 Emby 软件的任何专有组件（例如：DLL 文件、代码、图标或其他版权资源）。使用本项目不会直接修改或分发 Emby 软件本身。
+```powershell
+dotnet build ./StrmAssistant/StrmAssistant.csproj -c Release -p:EmbyServerPath=C:/path/to/emby/system
+python ./packaging/build-package.py --output C:/release-output
+```
 
-4. **功能限制**  
-   本项目不会绕过 Emby 的授权机制、数字版权保护 (DRM)，或以任何方式解锁其付费功能。本项目仅在运行时动态注入代码，且不会篡改 Emby 软件的核心功能。
-
-5. **用户责任**  
-   用户在使用本项目时，需自行承担遵守相关法律法规的责任。如果用户使用本项目违反了 Emby 的服务条款或相关法律法规，本项目开发者概不负责。
-
-### 免责声明
-
-1. 本项目开发者不对因使用本项目而可能导致的任何直接或间接后果（包括但不限于数据丢失、软件故障或法律纠纷）负责。
-2. 如果认为本项目可能侵犯相关方的合法权益，请与开发者取得联系。
-
-### 星星数
-
-[![Star History Chart](https://api.star-history.com/svg?repos=sjtuross/strmassistant&type=Date)](https://www.star-history.com/#sjtuross/strmassistant&Date)
+服务端引用仅用于编译，不在安装包分发。GPL、Harmony、DiscUtils、OpenCC 的声明与来源均随包保留。独立项目不使用原 PRO 二进制，也不声称是原作者的 PRO 发行版。

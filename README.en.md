@@ -1,30 +1,7 @@
-# Strm Assistant
+# Film Index Emby
 
-![logo](StrmAssistant/Properties/thumb.png "logo")
+Independent GPL community derivative targeting Emby 4.10.1.0. Current release is v0.1.0-preview.1 for user testing, not complete feature parity or certified fnOS/Linux support.
 
-## Purpose
+See [Chinese README](README.md), [installation and rollback](packaging/INSTALL.zh-CN.md), [development status](DEVELOPMENT.md), and [verification](VERIFICATION.json). The installation ZIP includes the single production DLL, corresponding source, notices and checksums. No Emby server assemblies or test plugin are distributed.
 
-1. Improve initial playback start speed
-2. Image capture and thumbnail preview enhanced
-3. Playback behavior-based intro and credits detection
-4. Independent external subtitle scan
-
-## Update
-
-1. Support concurrent tasks
-2. Support non-strm media imported with ffprobe blocked
-3. Include media extras
-4. Process media items by release date in the descending order
-5. Add plugin config page with library multi-selection
-6. Image capture enhanced
-7. Introduce catch-up mode
-8. Playback behavior-based intro and credits detection for episodes
-9. Independent external subtitle scan
-
-## Install
-
-1. Download `StrmAssistant.dll` to the `plugins` folder
-2. Restart Emby
-3. Go to the Plugins page and check the plugin version and settings
-
-**Note**: The minimum required Emby version is 4.8.5.0.
+The original upstream English introduction is preserved in [docs](docs/UPSTREAM-README.en.md); its feature list is not a supported-feature claim for this derivative.

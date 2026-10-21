@@ -1,3 +1,8 @@
+# Film Index Emby — 开发中
+
+本工作副本是面向 Emby 4.10.1.0 的社区源码派生项目，尚未完成全部目标功能，也没有发布完整安装包。
+实际实现、测试范围和待办请查看 [DEVELOPMENT.md](DEVELOPMENT.md) 与 [VERIFICATION.json](VERIFICATION.json)。
+下方保留上游介绍，不代表本派生版本的全部功能已经适配或通过验证。
 # Emby神医助手
 
 ![logo](StrmAssistant/Properties/thumb.png "logo")

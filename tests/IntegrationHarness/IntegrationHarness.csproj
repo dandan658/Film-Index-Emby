@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>FilmIndex.IntegrationHarness</AssemblyName></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../StrmAssistant/StrmAssistant.csproj" />
+    <Reference Include="$(EmbyServerPath)/MediaBrowser.*.dll;$(EmbyServerPath)/Emby.*.dll"><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

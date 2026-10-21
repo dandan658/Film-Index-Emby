@@ -8,6 +8,7 @@ using System.ComponentModel;
 
 namespace StrmAssistant.Options
 {
+    public enum LocalMetadataMode { Off, PreferCache, OnlineAndCache, OverrideOnly }
     public enum RefreshPersonOption
     {
         Default,
@@ -17,6 +18,11 @@ namespace StrmAssistant.Options
 
     public class MetadataEnhanceOptions : EditableOptionsBase
     {
+        [DisplayName("本地元数据模式")]
+        public LocalMetadataMode LocalMetadataMode { get; set; } = LocalMetadataMode.Off;
+        [DisplayName("本地元数据根目录")]
+        [Description("缓存与自定义覆盖按 TMDB ID 保存；覆盖目录只读。适用于电影、节目、季、集和合集。")]
+        public string LocalMetadataRoot { get; set; } = string.Empty;
         [DisplayNameL("PluginOptions_MetadataEnhanceOptions_Metadata_Enhance", typeof(Resources))]
         public override string EditorTitle => Resources.PluginOptions_MetadataEnhanceOptions_Metadata_Enhance;
         

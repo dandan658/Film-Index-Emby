@@ -15,6 +15,9 @@ namespace StrmAssistant.Notification
         {
             return new List<NotificationTypeInfo>
             {
+                new NotificationTypeInfo { Id = "filmindex.collection", Name = "合集变更", CategoryId = "film.index", CategoryName = "Film Index Emby" },
+                new NotificationTypeInfo { Id = "filmindex.metadata", Name = "元数据更新", CategoryId = "film.index", CategoryName = "Film Index Emby" },
+                new NotificationTypeInfo { Id = "filmindex.images", Name = "媒体图像更新", CategoryId = "film.index", CategoryName = "Film Index Emby" },
                 new NotificationTypeInfo
                 {
                     Id = "favorites.update",

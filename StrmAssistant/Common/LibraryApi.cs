@@ -519,7 +519,7 @@ namespace StrmAssistant.Common
             switch (item)
             {
                 case Video _:
-                    return !item.HasImage(ImageType.Primary) && ImageCaptureEnabled(item, libraryOptions);
+                    return !item.HasImage(ImageType.Primary);
                 case Audio _:
                     return !item.HasImage(ImageType.Primary) && ImageCaptureEnabled(item, libraryOptions) &&
                            item.GetMediaStreams().Any(i => i.Type == MediaStreamType.EmbeddedImage);
@@ -647,7 +647,7 @@ namespace StrmAssistant.Common
         {
             if (ExtractionPolicy.IsExcluded(taskItem)) return null;
             var persistMediaInfoMode = Plugin.Instance.GetPluginOptions().MediaInfoExtractOptions.PersistMediaInfoMode;
-            var persistMediaInfo = taskItem is Video && persistMediaInfoMode != PersistMediaInfoOption.None.ToString();
+            var persistMediaInfo = (taskItem is Video || taskItem is Audio) && persistMediaInfoMode != PersistMediaInfoOption.None.ToString();
             var mediaInfoRestoreMode = persistMediaInfoMode == PersistMediaInfoOption.Restore.ToString();
 
             var filePath = taskItem.Path;
@@ -708,9 +708,14 @@ namespace StrmAssistant.Common
 
             taskItem.DateLastRefreshed = new DateTimeOffset();
 
-            await _providerManager
-                .RefreshSingleItem(taskItem, refreshOptions, collectionFolders, dummyLibraryOptions, cancellationToken)
-                .ConfigureAwait(false);
+            var remoteInfo = await RemoteProbeClient.TryGet(taskItem, filePath, cancellationToken).ConfigureAwait(false);
+            using (RemoteProbeBridge.Enter(remoteInfo, filePath))
+                await _providerManager
+                    .RefreshSingleItem(taskItem, refreshOptions, collectionFolders, dummyLibraryOptions, cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (taskItem is Video captureVideo)
+                await Plugin.ImageCaptureApi.CaptureIfMissing(captureVideo, directoryService, cancellationToken).ConfigureAwait(false);
 
             if (persistMediaInfo)
             {

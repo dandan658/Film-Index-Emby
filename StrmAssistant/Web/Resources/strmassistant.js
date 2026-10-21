@@ -1,6 +1,22 @@
 ﻿define(['connectionManager', 'globalize', 'loading', 'toast', 'confirm', 'dialog'], function (connectionManager, globalize, loading, toast, confirm, dialog) {
 
     return {
+        clear_media: function (itemId) { return this.cleanup(itemId, 'MediaInfo'); },
+        clear_thumbnails: function (itemId) { return this.cleanup(itemId, 'Thumbnails'); },
+        delete_person: function (itemId) { return this.cleanup(itemId, 'Person'); },
+        cleanup: function (itemId, action) {
+            const chinese = globalize.getCurrentLocale().toLowerCase().startsWith('zh');
+            const text = chinese ? '确认清理所选项目？媒体信息清理同时删除本插件备份，缩略图清理删除章节图和 BIF；不会删除视频或音频文件。' :
+                'Clean up this selected item? Media-info cleanup also removes this plugin backup; thumbnail cleanup removes chapter images and BIF. Video and audio files are preserved.';
+            return confirm({ text: text, title: 'Film Index', primary: 'cancel' }).then(function () {
+                loading.show();
+                const api = connectionManager.currentApiClient();
+                return api.ajax({ type: 'POST', url: api.getUrl('FilmIndex/Items/' + encodeURIComponent(itemId) + '/Cleanup'),
+                    data: JSON.stringify({ Action: action, DeleteSidecar: action === 'MediaInfo' }), contentType: 'application/json' })
+                    .then(function () { toast(chinese ? '清理完成' : 'Cleanup completed'); })
+                    .finally(function () { loading.hide(); });
+            });
+        },
         copy: function (libraryId) {
             loading.show();
 

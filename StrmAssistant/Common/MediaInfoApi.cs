@@ -43,6 +43,12 @@ namespace StrmAssistant.Common
             public List<ChapterInfo> Chapters { get; set; } = new List<ChapterInfo>();
             public bool? ZeroFingerprintConfidence { get; set; }
             public string EmbeddedImage { get; set; }
+            public string AudioName { get; set; }
+            public string Album { get; set; }
+            public string[] Artists { get; set; }
+            public string[] AlbumArtists { get; set; }
+            public int? TrackNumber { get; set; }
+            public int? DiscNumber { get; set; }
         }
 
         public MediaInfoApi(ILibraryManager libraryManager, IFileSystem fileSystem, IProviderManager providerManager,
@@ -187,6 +193,13 @@ namespace StrmAssistant.Common
 
                         if (item is Audio)
                         {
+                            var audio = (Audio)item;
+                            jsonItem.AudioName = audio.Name;
+                            jsonItem.Album = audio.Album;
+                            jsonItem.Artists = audio.Artists;
+                            jsonItem.AlbumArtists = audio.AlbumArtists;
+                            jsonItem.TrackNumber = audio.IndexNumber;
+                            jsonItem.DiscNumber = audio.ParentIndexNumber;
                             var primaryImageInfo = item.GetImageInfo(ImageType.Primary, 0);
                             if (primaryImageInfo != null && _fileSystem.FileExists(primaryImageInfo.Path))
                             {
@@ -205,7 +218,16 @@ namespace StrmAssistant.Common
                         Directory.CreateDirectory(parentDirectory);
                     }
 
-                    _jsonSerializer.SerializeToFile(mediaSourcesWithChapters, mediaInfoJsonPath);
+                    var temporaryJson = mediaInfoJsonPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                    try
+                    {
+                        _jsonSerializer.SerializeToFile(mediaSourcesWithChapters, temporaryJson);
+                        File.Move(temporaryJson, mediaInfoJsonPath, true);
+                    }
+                    finally
+                    {
+                        if (File.Exists(temporaryJson)) File.Delete(temporaryJson);
+                    }
 
                     _logger.Info("MediaInfoPersist - Serialization Success (" + source + "): " + mediaInfoJsonPath);
 
@@ -270,21 +292,40 @@ namespace StrmAssistant.Common
                                 _fileSystem.GetFileInfo(subtitle.Path).Name);
                         }
 
-                        _itemRepository.SaveMediaStreams(item.InternalId,
-                            mediaSourceWithChapters.MediaSourceInfo.MediaStreams, CancellationToken.None);
-
                         if (workItem is Audio && !string.IsNullOrEmpty(mediaSourceWithChapters.EmbeddedImage))
                         {
                             var imageBytes = Convert.FromBase64String(mediaSourceWithChapters.EmbeddedImage);
+                            Directory.CreateDirectory(Plugin.Instance.ApplicationPaths.TempDirectory);
                             var tempPath = Path.Combine(Plugin.Instance.ApplicationPaths.TempDirectory,
                                 Guid.NewGuid() + ".jpg");
                             await _fileSystem.WriteAllBytesAsync(tempPath, imageBytes, CancellationToken.None)
                                 .ConfigureAwait(false);
 
                             var libraryOptions = _libraryManager.GetLibraryOptions(workItem);
-                            await _providerManager.SaveImage(workItem, libraryOptions, tempPath, ImageType.Primary,
+                            try
+                            {
+                                await _providerManager.SaveImage(workItem, libraryOptions, tempPath, ImageType.Primary,
                                     null, Array.Empty<long>(), directoryService, false, CancellationToken.None)
                                 .ConfigureAwait(false);
+                            }
+                            finally
+                            {
+                                if (File.Exists(tempPath)) File.Delete(tempPath);
+                            }
+                        }
+
+                        _itemRepository.SaveMediaStreams(item.InternalId,
+                            mediaSourceWithChapters.MediaSourceInfo.MediaStreams, CancellationToken.None);
+                        if (workItem is Audio audio)
+                        {
+                            // 4.10 loads linked album/artist names lazily; initialize before replacing them.
+                            audio.EnsureTaggedItemsLoaded();
+                            if (mediaSourceWithChapters.AudioName != null) audio.Name = mediaSourceWithChapters.AudioName;
+                            if (mediaSourceWithChapters.Album != null) audio.Album = mediaSourceWithChapters.Album;
+                            if (mediaSourceWithChapters.Artists != null) audio.Artists = mediaSourceWithChapters.Artists;
+                            if (mediaSourceWithChapters.AlbumArtists != null) audio.AlbumArtists = mediaSourceWithChapters.AlbumArtists;
+                            if (mediaSourceWithChapters.TrackNumber.HasValue) audio.IndexNumber = mediaSourceWithChapters.TrackNumber;
+                            if (mediaSourceWithChapters.DiscNumber.HasValue) audio.ParentIndexNumber = mediaSourceWithChapters.DiscNumber;
                         }
 
                         workItem.Size = mediaSourceWithChapters.MediaSourceInfo.Size.GetValueOrDefault();
@@ -319,6 +360,7 @@ namespace StrmAssistant.Common
                         }
 
                         _logger.Info("MediaInfoPersist - Deserialization Success (" + source + "): " + mediaInfoJsonPath);
+                        ChangeNotificationMonitor.Publish(workItem, ItemUpdateType.MetadataImport);
 
                         return true;
                     }

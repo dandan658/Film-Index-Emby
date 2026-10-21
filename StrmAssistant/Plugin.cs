@@ -62,6 +62,7 @@ namespace StrmAssistant
         public static PlaySessionMonitor PlaySessionMonitor { get; private set; }
         public static MetadataApi MetadataApi { get; private set; }
         public static VideoThumbnailApi VideoThumbnailApi { get; private set; }
+        internal static ImageCaptureApi ImageCaptureApi { get; private set; }
 
         private readonly Guid _id = new Guid("39c8f456-92d0-4424-a88b-91962aa3ccfe");
 
@@ -75,6 +76,8 @@ namespace StrmAssistant
         private readonly IProviderManager _providerManager;
         private readonly IFileSystem _fileSystem;
         private readonly ITaskManager _taskManager;
+        private readonly CompletionMonitor _completionMonitor;
+        private readonly ChangeNotificationMonitor _changeNotifications;
 
         private bool _currentSuppressOnOptionsSaved;
         private int _currentMaxConcurrentCount;
@@ -105,7 +108,8 @@ namespace StrmAssistant
             IFfmpegManager ffmpegManager, IMediaEncoder mediaEncoder, IJsonSerializer jsonSerializer,
             IHttpClient httpClient, IServerApplicationHost serverApplicationHost,
             IServerConfigurationManager configurationManager, ITaskManager taskManager,
-            IImageExtractionManager imageExtractionManager, IServerApplicationPaths serverApplicationPaths) : base(applicationHost)
+            IImageExtractionManager imageExtractionManager, IServerApplicationPaths serverApplicationPaths,
+            MediaBrowser.Controller.Collections.ICollectionManager collectionManager) : base(applicationHost)
         {
             Instance = this;
             Logger = logManager.GetLogger(Name);
@@ -119,6 +123,13 @@ namespace StrmAssistant
             _providerManager = providerManager;
             _fileSystem = fileSystem;
             _taskManager = taskManager;
+            NativeNetworkApi.Initialize();
+            RemoteProbeBridge.Initialize(mediaProbeManager);
+            serverApplicationHost.Disposed += (_, __) => NativeNetworkApi.Dispose();
+            serverApplicationHost.Disposed += (_, __) => RemoteProbeBridge.Dispose();
+            _completionMonitor = new CompletionMonitor(sessionManager, libraryManager, userManager,
+                userDataManager, serverApplicationHost, Logger);
+            _changeNotifications = new ChangeNotificationMonitor(libraryManager, notificationManager, serverApplicationHost, Logger, collectionManager);
 
             _currentMaxConcurrentCount = GetOptions().GeneralOptions.MaxConcurrentCount;
             _currentPersistMediaInfo = GetOptions().MediaInfoExtractOptions.PersistMediaInfoMode !=
@@ -156,6 +167,7 @@ namespace StrmAssistant
                 jsonSerializer, httpClient);
             VideoThumbnailApi = new VideoThumbnailApi(libraryManager, fileSystem, imageExtractionManager, itemRepository,
                 mediaMountManager, serverApplicationPaths, libraryMonitor, ffmpegManager);
+            ImageCaptureApi = new ImageCaptureApi(ffmpegManager, providerManager, libraryManager);
             ShortcutMenuHelper.Initialize(configurationManager);
 
             if (_currentCatchupMode) QueueManager.Initialize();
@@ -238,7 +250,7 @@ namespace StrmAssistant
             {
                 var deserializeResult = false;
 
-                if (_currentPersistMediaInfo && e.Item is Video)
+                if (_currentPersistMediaInfo && (e.Item is Video || e.Item is Audio))
                 {
                     deserializeResult = LibraryApi.HasMediaInfo(e.Item);
 
@@ -306,7 +318,7 @@ namespace StrmAssistant
 
         private void OnItemRemoved(object sender, ItemChangeEventArgs e)
         {
-            if (!_currentMediaInfoRestoreMode && e.Item is Video)
+            if (!_currentMediaInfoRestoreMode && (e.Item is Video || e.Item is Audio))
             {
                 var directoryService = new DirectoryService(Logger, _fileSystem);
                 MediaInfoApi.DeleteMediaInfoJson(e.Item, directoryService, "Item Removed Event");
@@ -366,6 +378,10 @@ namespace StrmAssistant
 
         protected override bool OnOptionsSaving(PluginOptions options)
         {
+            // API saves and first-run migrations do not necessarily carry editor-derived lists.
+            if (options.MediaInfoExtractOptions.LibraryList == null || options.IntroSkipOptions.LibraryList == null ||
+                options.IntroSkipOptions.UserList == null || options.IntroSkipOptions.MarkerEnabledLibraryList == null)
+                OnBeforeShowUI(options);
             if (string.IsNullOrEmpty(options.GeneralOptions.CatchupTaskScope))
             {
                 options.GeneralOptions.CatchupTaskScope = CatchupTask.MediaInfo.ToString();
@@ -413,6 +429,8 @@ namespace StrmAssistant
 
         protected override void OnOptionsSaved(PluginOptions options)
         {
+            NativeNetworkApi.Update();
+            SearchIndexApi.OptionsChanged();
             var suppress = _currentSuppressOnOptionsSaved;
 
             if (_currentCatchupMode != options.GeneralOptions.CatchupMode)

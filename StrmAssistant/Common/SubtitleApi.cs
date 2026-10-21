@@ -8,6 +8,8 @@ using MediaBrowser.Model.Globalization;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.MediaInfo;
+using MediaBrowser.Model.Dto;
+using MediaBrowser.Model.Dlna;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,6 +26,9 @@ namespace StrmAssistant.Common
         private readonly ILibraryManager _libraryManager;
         private readonly IItemRepository _itemRepository;
         private readonly IFileSystem _fileSystem;
+        private readonly IMediaProbeManager _mediaProbeManager;
+        private readonly object _audioResolver;
+        private readonly MethodInfo _getExternalAudioTracks;
 
         private readonly object _subtitleResolver;
         private readonly MethodInfo _getExternalSubtitleStreams;
@@ -40,6 +45,7 @@ namespace StrmAssistant.Common
             _libraryManager = libraryManager;
             _itemRepository = itemRepository;
             _fileSystem = fileSystem;
+            _mediaProbeManager = mediaProbeManager;
 
             try
             {
@@ -54,6 +60,9 @@ namespace StrmAssistant.Common
                     localizationManager, fileSystem, libraryManager
                 });
                 _getExternalSubtitleStreams = subtitleResolverType.GetMethod("GetExternalTracks");
+                var audioResolverType = embyProviders.GetType("Emby.Providers.MediaInfo.AudioTrackResolver", true);
+                _audioResolver = Activator.CreateInstance(audioResolverType, localizationManager, fileSystem, libraryManager);
+                _getExternalAudioTracks = audioResolverType.GetMethod("GetExternalTracks");
 
                 var ffProbeSubtitleInfoType = embyProviders.GetType("Emby.Providers.MediaInfo.FFProbeSubtitleInfo");
                 var ffProbeSubtitleInfoConstructor = ffProbeSubtitleInfoType.GetConstructor(new[]
@@ -97,6 +106,16 @@ namespace StrmAssistant.Common
                 new object[] { item, subtitleStream, options, libraryOptions, cancellationToken });
         }
 
+        private List<MediaStream> GetExternalAudioTracks(BaseItem item, int startIndex,
+            IDirectoryService directoryService, bool clearCache)
+        {
+            if (_audioResolver == null || _getExternalAudioTracks == null)
+                throw new NotSupportedException("External audio resolver is unavailable in this server build.");
+            return (List<MediaStream>)_getExternalAudioTracks.Invoke(_audioResolver,
+                new object[] { item, startIndex, directoryService, _libraryManager.GetLibraryOptions(item),
+                    _libraryManager.GetNamingOptions(), clearCache });
+        }
+
         public MetadataRefreshOptions GetExternalSubtitleRefreshOptions()
         {
             return new MetadataRefreshOptions(new DirectoryService(_logger, _fileSystem))
@@ -113,8 +132,9 @@ namespace StrmAssistant.Common
 
         public bool HasExternalSubtitleChanged(BaseItem item, IDirectoryService directoryService, bool clearCache)
         {
+            var includeAudio = Plugin.Instance.GetPluginOptions().MediaInfoExtractOptions.ScanExternalAudioTracks;
             var currentExternalSubtitleFiles = item.GetMediaStreams()
-                .Where(stream => stream.Type == MediaStreamType.Subtitle && stream.IsExternal)
+                .Where(stream => (stream.Type == MediaStreamType.Subtitle || includeAudio && stream.Type == MediaStreamType.Audio) && stream.IsExternal)
                 .Select(stream => stream.Path).Where(path => !string.IsNullOrEmpty(path));
             var currentSet = new HashSet<string>(currentExternalSubtitleFiles, StringComparer.Ordinal);
 
@@ -123,6 +143,8 @@ namespace StrmAssistant.Common
                 var newExternalSubtitleFiles = GetExternalSubtitleStreams(item, 0, directoryService, clearCache)
                     .Select(i => i.Path)
                     .ToArray();
+                if (includeAudio) newExternalSubtitleFiles = newExternalSubtitleFiles
+                    .Concat(GetExternalAudioTracks(item, 0, directoryService, clearCache).Select(i => i.Path)).ToArray();
                 var newSet = new HashSet<string>(newExternalSubtitleFiles, StringComparer.Ordinal);
 
                 return !currentSet.SetEquals(newSet);
@@ -139,9 +161,10 @@ namespace StrmAssistant.Common
             bool persistMediaInfo)
         {
             var directoryService = refreshOptions.DirectoryService;
+            var includeAudio = Plugin.Instance.GetPluginOptions().MediaInfoExtractOptions.ScanExternalAudioTracks;
             var currentStreams = item.GetMediaStreams()
                 .FindAll(i =>
-                    !(i.IsExternal && i.Type == MediaStreamType.Subtitle && i.Protocol == MediaProtocol.File));
+                    !(i.IsExternal && (i.Type == MediaStreamType.Subtitle || includeAudio && i.Type == MediaStreamType.Audio) && i.Protocol == MediaProtocol.File));
             var startIndex = currentStreams.Count == 0 ? 0 : currentStreams.Max(i => i.Index) + 1;
 
             if (GetExternalSubtitleStreams(item, startIndex, directoryService, clearCache) is
@@ -164,6 +187,29 @@ namespace StrmAssistant.Common
                 }
 
                 currentStreams.AddRange(externalSubtitleStreams);
+                if (includeAudio)
+                {
+                    startIndex = currentStreams.Count == 0 ? 0 : currentStreams.Max(i => i.Index) + 1;
+                    var audioTracks = GetExternalAudioTracks(item, startIndex, directoryService, clearCache);
+                    foreach (var audioTrack in audioTracks)
+                    {
+                        var info = await _mediaProbeManager.GetMediaInfo(new MediaInfoRequest
+                        {
+                            MediaType = DlnaProfileType.Audio,
+                            ExtractChapters = false,
+                            MediaSource = new MediaSourceInfo { Path = audioTrack.Path, Protocol = MediaProtocol.File }
+                        }, CancellationToken.None).ConfigureAwait(false);
+                        var probed = info?.MediaStreams?.FirstOrDefault(stream => stream.Type == MediaStreamType.Audio);
+                        if (probed == null) throw new InvalidOperationException("External audio probe returned no audio stream; existing streams were preserved.");
+                        probed.IsExternal = true;
+                        probed.Path = audioTrack.Path;
+                        probed.Protocol = MediaProtocol.File;
+                        probed.Index = startIndex++;
+                        if (string.IsNullOrEmpty(probed.Language)) probed.Language = audioTrack.Language;
+                        currentStreams.Add(probed);
+                        _logger.Info("ExternalAudio - Audio Processed: " + audioTrack.Path);
+                    }
+                }
                 _itemRepository.SaveMediaStreams(item.InternalId, currentStreams, CancellationToken.None);
 
                 if (persistMediaInfo && Plugin.LibraryApi.IsLibraryInScope(item))

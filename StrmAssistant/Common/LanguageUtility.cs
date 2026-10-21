@@ -1,4 +1,3 @@
-using Microsoft.International.Converters.TraditionalChineseToSimplifiedConverter;
 using System.Text.RegularExpressions;
 
 namespace StrmAssistant.Common
@@ -47,7 +46,7 @@ namespace StrmAssistant.Common
 
         public static string ConvertTraditionalToSimplified(string input)
         {
-            return ChineseConverter.Convert(input, ChineseConversionDirection.TraditionalToSimplified);
+            return ChineseText.ToSimplified(input);
         }
 
         public static string GetLanguageByTitle(string input)

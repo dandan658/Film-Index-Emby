@@ -39,12 +39,9 @@ namespace StrmAssistant.Web.Helper
         private static void ModifyShortcutMenu(IServerConfigurationManager configurationManager)
         {
             string shortcutsJs;
-            var shortcutsJsStream = GetResourceStream("shortcuts.js");
-            shortcutsJsStream.Seek(0, SeekOrigin.Begin);
-            using (var reader = new StreamReader(shortcutsJsStream))
-            {
-                shortcutsJs = reader.ReadToEnd();
-            }
+            // Extend the installed version rather than shipping an obsolete Emby web bundle.
+            var nativeShortcuts = Path.Combine(Plugin.Instance.ApplicationPaths.ProgramSystemPath, "dashboard-ui", "modules", "shortcuts.js");
+            shortcutsJs = File.ReadAllText(nativeShortcuts);
 
             const string injectShortcutCommand = @"
 const strmAssistantCommandSource = {
@@ -100,6 +97,14 @@ const strmAssistantCommandSource = {
                     (['zh-hk', 'zh-tw'].includes(locale) ? '\u6E05\u9664\u7247\u982D\u6A19\u8A18' : 'Clear Intro Markers');
                 result.push({ name: commandName, id: 'clear_intro', icon: 'clear_all' });
             }
+            if (options.user?.Policy.IsAdministrator) {
+                if (['Movie', 'Episode', 'Video', 'Audio'].includes(options.items[0].Type))
+                    result.push({ name: cjk ? '清除媒体信息与备份' : 'Clear media information and backup', id: 'clear_media', icon: 'restart_alt' });
+                if (['Movie', 'Episode', 'Video'].includes(options.items[0].Type))
+                    result.push({ name: cjk ? '清除章节图和 BIF' : 'Clear chapter images and BIF', id: 'clear_thumbnails', icon: 'hide_image' });
+                if (options.items[0].Type === 'Person')
+                    result.push({ name: cjk ? '删除此演员记录' : 'Delete this person record', id: 'delete_person', icon: 'person_remove' });
+            }
             return result;
         }
         if (!options.multiSelect && options.items?.length > 1 && options.items[0].Type !== 'CollectionFolder' &&
@@ -119,7 +124,10 @@ const strmAssistantCommandSource = {
             traverse: 'traverse',
             lock: 'lock',
             unlock: 'unlock',
-            clear_intro: 'clear_intro'
+            clear_intro: 'clear_intro',
+            clear_media: 'clear_media',
+            clear_thumbnails: 'clear_thumbnails',
+            delete_person: 'delete_person'
         };
         if (command.startsWith('delver_')) {
             const mediaSourceId = command.replace('delver_', '');

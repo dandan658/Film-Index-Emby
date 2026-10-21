@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 
-if (args.Length != 2) throw new ArgumentException("Usage: Compatibility <Emby 4.10.1.0 system> <plugin output>");
+if (args.Length < 2 || args.Length > 3) throw new ArgumentException("Usage: Compatibility <Emby 4.10.1.0 system> <plugin output> [ffmpeg executable]");
 var server = Path.GetFullPath(args[0]);
 var plugin = Path.GetFullPath(args[1]);
 AssemblyLoadContext.Default.Resolving += (_, name) => {
@@ -36,7 +36,7 @@ Check(fingerprint.GetMethod("GetAllFingerprintFilesForSeason")!.ReturnType != ty
 var built = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(plugin, "FilmIndex.Emby.dll"));
 Check(built.GetTypes().All(t => t.Name != "UpdatePluginTask"), "Upstream automatic binary updater is excluded");
 Check(built.GetType("StrmAssistant.Plugin", true) != null, "Plugin types load against exact server assemblies");
-Check(File.Exists(Path.Combine(plugin, "ChineseConverter.dll")), "Chinese conversion dependency is present");
+Check(built.GetReferencedAssemblies().All(a => a.Name != "ChineseConverter"), "Plugin no longer needs the legacy conversion DLL");
 var rule = built.GetType("StrmAssistant.Common.ExtractionRules", true)!.GetMethod("IsExcluded")!;
 bool Excluded(string? name, string? path, string[]? tags, string? keywords, string? blockedTags) =>
     (bool)rule.Invoke(null, new object?[] { name, path, tags, keywords, blockedTags })!;
@@ -48,4 +48,23 @@ Check(Excluded("Film", "/media/test", new[] { "Skip" }, null, "skip"), "Tag matc
 Check(!Excluded("Film", "/media/test", new[] { "skip-more" }, null, "skip"), "Tag matching does not exclude partial tags");
 Check(Excluded("Film", "/media/test", new[] { "动画" }, null, "电影; 动画\n剧集"), "Multiple tags and newlines are supported");
 Check(!Excluded("Film", "/media/test", null, ".*", null), "Keywords are literals, not regexes");
+var chinese = built.GetType("StrmAssistant.Common.ChineseText", true)!;
+string? Simplify(string? value) => (string?)chinese.GetMethod("ToSimplified")!.Invoke(null, new object?[] { value });
+string? Traditional(string? value) => (string?)chinese.GetMethod("ToTraditional")!.Invoke(null, new object?[] { value });
+Check(Simplify("電視劇與電影") == "电视剧与电影", "Traditional titles convert to simplified");
+Check(Traditional("电视剧与电影") == "電視劇與電影", "Simplified titles convert to traditional");
+Check(Simplify("一目瞭然") == "一目了然", "Conversion supports phrase overrides");
+Check(Simplify("Emby 4.10 😀") == "Emby 4.10 😀" && Simplify(null) == null, "Conversion preserves symbols, ASCII and null");
+Check(Enumerable.Range(0, 32).AsParallel().All(_ => Simplify("電視劇") == "电视剧"), "Conversion initialization and reads are thread safe");
+var earlier = built.GetType("StrmAssistant.Common.CompletionRules", true)!.GetMethod("IsEarlierEpisode")!;
+bool Earlier(int? season, int? ep, int? doneSeason, int? doneEp) => (bool)earlier.Invoke(null, new object?[] { season, ep, doneSeason, doneEp })!;
+Check(Earlier(1, 3, 1, 5), "Completion selects earlier episodes in the same season");
+Check(Earlier(1, 10, 2, 1), "Completion selects preceding seasons");
+Check(!Earlier(1, 5, 1, 5) && !Earlier(2, 1, 1, 5), "Completion excludes current and future episodes");
+Check(!Earlier(0, 1, 1, 5) && !Earlier(1, 1, 0, 5), "Completion does not process specials");
+Check(!Earlier(null, 1, 1, 5) && !Earlier(1, null, 1, 5), "Completion ignores missing numbering");
+var audioResolver = Load("Emby.Providers", "Emby.Providers.MediaInfo.AudioTrackResolver");
+Check(audioResolver.GetMethod("GetExternalTracks")?.GetParameters().Length == 6, "External audio resolver matches target server");
+IntroDbTests.Run(built, Check);
+if (args.Length == 3) await CaptureTests.Run(built, args[2], Check);
 Console.WriteLine($"{count} checks passed. These are assembly compatibility checks, not media-library integration tests.");

@@ -1,0 +1,44 @@
+PASS: Exact Emby 4.10.1.0 reference version
+PASS: External subtitle resolver has six parameters
+PASS: Thumbnail replacement and persistence arguments are distinct
+PASS: Media mount exposes path metadata
+PASS: Media-source overload has eight parameters
+PASS: Fingerprint sequence update accepts cancellation
+PASS: Fingerprint task uses a strongly typed result
+PASS: Upstream automatic binary updater is excluded
+PASS: Plugin types load against exact server assemblies
+PASS: Plugin no longer needs the legacy conversion DLL
+PASS: Empty rules do not exclude media
+PASS: Whitespace tokens cannot match everything
+PASS: Keyword matching ignores case
+PASS: Chinese path keywords match
+PASS: Tag matching ignores case
+PASS: Tag matching does not exclude partial tags
+PASS: Multiple tags and newlines are supported
+PASS: Keywords are literals, not regexes
+PASS: Traditional titles convert to simplified
+PASS: Simplified titles convert to traditional
+PASS: Conversion supports phrase overrides
+PASS: Conversion preserves symbols, ASCII and null
+PASS: Conversion initialization and reads are thread safe
+PASS: Completion selects earlier episodes in the same season
+PASS: Completion selects preceding seasons
+PASS: Completion excludes current and future episodes
+PASS: Completion does not process specials
+PASS: Completion ignores missing numbering
+PASS: External audio resolver matches target server
+PASS: IntroDB parses exact episode markers with millisecond precision
+PASS: IntroDB rejects another episode or title
+PASS: IntroDB rejects intro timestamps outside the video duration
+PASS: IntroDB rejects negative timestamps while accepting a valid independent credits marker
+PASS: IntroDB preserves existing markers by default
+PASS: IntroDB replaces existing markers only on explicit replacement
+PASS: IntroDB respects a confirmed no-intro result
+PASS: Distributed root checks reject sibling prefixes and parent traversal
+PASS: FFmpeg captures real video using quoted file paths
+PASS: FFmpeg captures portrait framing
+PASS: Failed capture preserves the previous image
+PASS: Capture cancellation propagates without replacing the image
+PASS: Stalled remote media times out and its FFmpeg process exits
+PASS: Capture temporary JPEG files are removed
+43 checks passed. These are assembly compatibility checks, not media-library integration tests.

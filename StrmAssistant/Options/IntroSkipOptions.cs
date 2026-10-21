@@ -10,6 +10,12 @@ namespace StrmAssistant.Options
 {
     public class IntroSkipOptions : EditableOptionsBase
     {
+        [DisplayName("从 IntroDB 获取片头片尾标记")]
+        [Description("使用公开片头片尾数据；只按 IMDb ID 和季集号精确匹配。默认保留已有标记。")]
+        public bool EnableIntroDb { get; set; } = false;
+
+        [DisplayName("自动扫描时也获取 IntroDB 标记")]
+        public bool IntroDbOnAutomatedRefresh { get; set; } = false;
         [DisplayNameL("PluginOptions_IntroSkipOptions_Intro_Credits_Detection", typeof(Resources))]
         public override string EditorTitle => Resources.PluginOptions_IntroSkipOptions_Intro_Credits_Detection;
         
@@ -24,6 +30,10 @@ namespace StrmAssistant.Options
         [Required]
         [VisibleCondition(nameof(UnlockIntroSkip), SimpleCondition.IsTrue)]
         public int IntroDetectionFingerprintMinutes { get; set; } = 10;
+
+        [DisplayName("保留各媒体库的片头探测时长")]
+        [Description("开启后使用各媒体库原生设置中的声纹探测时长，本插件不再用全局值覆盖。")]
+        public bool PreserveLibraryFingerprintLength { get; set; } = false;
 
         [Browsable(false)]
         public IEnumerable<EditorSelectOption> MarkerEnabledLibraryList { get; set; }

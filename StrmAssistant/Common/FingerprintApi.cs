@@ -301,6 +301,7 @@ namespace StrmAssistant.Common
             var introDetectionFingerprintMinutes =
                 Plugin.Instance.GetPluginOptions().IntroSkipOptions.IntroDetectionFingerprintMinutes;
             _logger.Info("Intro Detection Fingerprint Length (Minutes): " + introDetectionFingerprintMinutes);
+            var preserveLibraryLength = Plugin.Instance.GetPluginOptions().IntroSkipOptions.PreserveLibraryFingerprintLength;
 
             var itemsFingerprintQuery = new InternalItemsQuery
             {
@@ -308,7 +309,7 @@ namespace StrmAssistant.Common
                 Recursive = true,
                 GroupByPresentationUniqueKey = false,
                 WithoutChapterMarkers = new[] { MarkerType.IntroStart },
-                MinRunTimeTicks = TimeSpan.FromMinutes(introDetectionFingerprintMinutes).Ticks,
+                MinRunTimeTicks = TimeSpan.FromMinutes(preserveLibraryLength ? 2 : introDetectionFingerprintMinutes).Ticks,
                 HasIntroDetectionFailure = false,
                 HasAudioStream = true
             };
@@ -329,11 +330,16 @@ namespace StrmAssistant.Common
             var items = _libraryManager.GetItemList(itemsFingerprintQuery).Where(i => isModSupported || !i.IsShortcut)
                 .OfType<Episode>().ToList();
 
+            if (preserveLibraryLength)
+                items = items.Where(item => item.RunTimeTicks >= TimeSpan.FromMinutes(Math.Clamp(
+                    _libraryManager.GetLibraryOptions(item).IntroDetectionFingerprintLength, 2, 20)).Ticks).ToList();
             return items;
         }
 
         public void UpdateLibraryIntroDetectionFingerprintLength()
         {
+            if (!Plugin.Instance.GetPluginOptions().IntroSkipOptions.UnlockIntroSkip ||
+                Plugin.Instance.GetPluginOptions().IntroSkipOptions.PreserveLibraryFingerprintLength) return;
             var libraries = _libraryManager.GetVirtualFolders()
                 .Where(f => f.CollectionType == CollectionType.TvShows.ToString() || f.CollectionType is null)
                 .ToList();
@@ -361,6 +367,9 @@ namespace StrmAssistant.Common
                 Plugin.Instance.GetPluginOptions().IntroSkipOptions.IntroDetectionFingerprintMinutes;
 
             var libraryOptions = _libraryManager.GetLibraryOptions(season);
+            if (Plugin.Instance.GetPluginOptions().IntroSkipOptions.PreserveLibraryFingerprintLength &&
+                libraryOptions.IntroDetectionFingerprintLength >= 2 && libraryOptions.IntroDetectionFingerprintLength <= 20)
+                introDetectionFingerprintMinutes = libraryOptions.IntroDetectionFingerprintLength;
             var directoryService = new DirectoryService(_logger, _fileSystem);
 
             var episodeQuery = new InternalItemsQuery

@@ -6,6 +6,7 @@
     <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
     <AssemblyName>FilmIndex.Emby</AssemblyName>
+    <RootNamespace>StrmAssistant</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="ScheduledTask\UpdatePluginTask.cs" />
@@ -14,16 +15,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\thumb.png" />
-    <EmbeddedResource Include="Web\Resources\shortcuts.js" />
     <EmbeddedResource Include="Web\Resources\strmassistant.js" />
+    <EmbeddedResource Include="Data\OpenCC\*.txt" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)lib.harmony/2.3.6/lib/net8.0/0Harmony.dll" LogicalName="FilmIndex.Dependencies.0Harmony.dll" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CHTCHSConv" Version="1.0.0">
-    </PackageReference>
-    <PackageReference Include="ILRepack" Version="2.0.42">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Lib.Harmony" Version="2.3.6" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -54,9 +51,6 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(InstallIntoLocalEmby)' == 'true'">
-    <Exec Command="$(ILRepack) /out:%25AppData%25\Emby-Server\programdata\plugins\$(TargetFileName) $(TargetPath) $(TargetDir)ChineseConverter.dll /lib:$(TargetDir)" />
-  </Target>
   <Target Name="RequireExactServer" BeforeTargets="ResolveReferences">
     <Error Condition="!Exists('$(EmbyServerPath)/MediaBrowser.Controller.dll')" Text="Set EmbyServerPath to the official Emby 4.10.1.0 system directory. Server assemblies are build references only and must not be redistributed." />
   </Target>

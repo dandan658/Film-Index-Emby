@@ -22,6 +22,10 @@ namespace StrmAssistant.Options
         [Description("标签完整匹配，多个标签用分号分隔。不区分大小写，留空关闭。")]
         public string ExcludedExtractionTags { get; set; } = string.Empty;
 
+        [DisplayName("同时扫描外挂音轨")]
+        [Description("外挂字幕扫描时识别并探测同名音轨；探测失败时保留当前媒体流记录。")]
+        public bool ScanExternalAudioTracks { get; set; } = false;
+
         [DisplayNameL("PluginOptions_IncludeExtra_Include_Extra", typeof(Resources))]
         [DescriptionL("PluginOptions_IncludeExtra_Include_media_extras_to_extract__Default_is_False_", typeof(Resources))]
         [Required]
@@ -29,9 +33,13 @@ namespace StrmAssistant.Options
 
         [DisplayNameL("PluginOptions_EnableImageCapture_Enable_Image_Capture", typeof(Resources))]
         [DescriptionL("PluginOptions_EnableImageCapture_Perform_image_capture_for_videos_without_primary_image__Default_is_False_", typeof(Resources))]
-        [Browsable(false)]
         [Required]
-        public bool EnableImageCapture => false;
+        public bool EnableImageCapture { get; set; } = false;
+
+        [DisplayName("自定义 FFmpeg 路径")]
+        [Description("留空使用 Emby 自带程序。填写容器内可执行文件的绝对路径，不填写命令参数。用于本插件生成封面图。")]
+        [VisibleCondition(nameof(EnableImageCapture), SimpleCondition.IsTrue)]
+        public string CustomFfmpegPath { get; set; } = string.Empty;
 
         [DisplayNameL("MediaInfoExtractOptions_ImageCaptureOffset_Image_Capture_Offset", typeof(Resources))]
         [DescriptionL("MediaInfoExtractOptions_ImageCaptureOffset_Image_capture_position_as_a_percentage_of_runtime__Default_is_10_", typeof(Resources))]

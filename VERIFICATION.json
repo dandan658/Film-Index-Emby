@@ -5,7 +5,7 @@
   "upstream_revision": "beb65cf8e4d7b19ce418c3aa32cfb6eff04acfb2",
   "build": "passed against exact official 4.10.1.0 assemblies",
   "assembly_rule_and_ffmpeg_checks_passed": 49,
-  "fixture_integration_and_contract_checks_passed": 117,
+  "fixture_integration_and_contract_checks_passed": 132,
   "integration_environment": "isolated official Windows Emby 4.10.1.0; generated media and disposable users",
   "notification_delivery": "recording sink; external delivery untested",
   "distributed_extraction": "real HTTP round trip within one fixture server; cross-host Linux untested",
@@ -20,5 +20,9 @@
   "javascript_assertions_passed": 8,
   "online_douban": "public page returned no usable JSON-LD; online acceptance remains incomplete",
   "native_intro_import": "real native refresh and chapter database with deterministic intercepted public response; live upstream coverage untested",
-  "fingerprint_test": "two real generated audio/video files extracted concurrently with separate native 2 and 3 minute library settings"
+  "fingerprint_test": "two real generated audio/video files extracted concurrently with separate native 2 and 3 minute library settings",
+  "installer_rollback_checks_passed": 17,
+  "installer_environment": "Windows BusyBox in disposable directories; not fnOS/Linux certification",
+  "disc_test": "self-authored real UDF ISO and BDMV; accurate MPLS duration/chapters, PID language, native database, cover and sidecar; malformed-image preservation",
+  "disc_limits": "local unencrypted Blu-ray only; HTTP ISO explicitly skipped; DVD, DV P7 and disc chapter/BIF capture incomplete"
 }

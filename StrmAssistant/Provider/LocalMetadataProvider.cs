@@ -14,12 +14,16 @@ namespace StrmAssistant.Provider
         ICustomMetadataProvider<Season>, ICustomMetadataProvider<Episode>, ICustomMetadataProvider<BoxSet>
     {
         public string Name => "Film Index Local Metadata";
-        private static async Task<ItemUpdateType> Fetch(BaseItem item, CancellationToken token)
-            => await LocalMetadataStore.Process(item, token).ConfigureAwait(false) ? ItemUpdateType.MetadataImport : ItemUpdateType.None;
-        public Task<ItemUpdateType> FetchAsync(MetadataResult<Movie> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result.Item, token);
-        public Task<ItemUpdateType> FetchAsync(MetadataResult<Series> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result.Item, token);
-        public Task<ItemUpdateType> FetchAsync(MetadataResult<Season> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result.Item, token);
-        public Task<ItemUpdateType> FetchAsync(MetadataResult<Episode> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result.Item, token);
-        public Task<ItemUpdateType> FetchAsync(MetadataResult<BoxSet> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result.Item, token);
+        private static async Task<ItemUpdateType> Fetch<T>(MetadataResult<T> result, CancellationToken token) where T : BaseItem
+        {
+            var people = result.People ?? new System.Collections.Generic.List<PersonInfo>();
+            if (!await LocalMetadataStore.Process(result.Item, token, people).ConfigureAwait(false)) return ItemUpdateType.None;
+            result.People = people; return ItemUpdateType.MetadataImport;
+        }
+        public Task<ItemUpdateType> FetchAsync(MetadataResult<Movie> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result, token);
+        public Task<ItemUpdateType> FetchAsync(MetadataResult<Series> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result, token);
+        public Task<ItemUpdateType> FetchAsync(MetadataResult<Season> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result, token);
+        public Task<ItemUpdateType> FetchAsync(MetadataResult<Episode> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result, token);
+        public Task<ItemUpdateType> FetchAsync(MetadataResult<BoxSet> result, MetadataRefreshOptions options, LibraryOptions library, CancellationToken token) => Fetch(result, token);
     }
 }

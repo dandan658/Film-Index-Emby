@@ -9,8 +9,14 @@ namespace StrmAssistant.Common
 {
     public static class CaptureRunner
     {
-        public static async Task<bool> Capture(string encoder, string input, string output, double seconds,
+        public static Task<bool> Capture(string encoder, string input, string output, double seconds,
             bool portrait, TimeSpan timeout, CancellationToken cancellation)
+            => Core(encoder, input, output, seconds, portrait, timeout, cancellation, null);
+        public static Task<bool> CaptureDisc(string encoder, string source, int playlist, string output, double seconds,
+            bool portrait, TimeSpan timeout, CancellationToken cancellation)
+            => Core(encoder, "bluray:" + source, output, seconds, portrait, timeout, cancellation, playlist);
+        private static async Task<bool> Core(string encoder, string input, string output, double seconds,
+            bool portrait, TimeSpan timeout, CancellationToken cancellation, int? playlist)
         {
             if (!File.Exists(encoder)) throw new FileNotFoundException("FFmpeg executable does not exist.");
             if (seconds < 0 || !double.IsFinite(seconds)) throw new ArgumentOutOfRangeException(nameof(seconds));
@@ -22,6 +28,11 @@ namespace StrmAssistant.Common
             {
                 UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true
             };
+            if (playlist.HasValue)
+            {
+                if (playlist < 0 || playlist > 99999) throw new ArgumentOutOfRangeException(nameof(playlist));
+                process.StartInfo.ArgumentList.Add("-playlist"); process.StartInfo.ArgumentList.Add(playlist.Value.ToString(CultureInfo.InvariantCulture));
+            }
             foreach (var argument in new[] { "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-ss",
                 seconds.ToString("0.###", CultureInfo.InvariantCulture), "-threads", "1", "-i", input,
                 "-map", "0:v:0", "-frames:v", "1", "-an", "-sn", "-vf",

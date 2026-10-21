@@ -32,8 +32,13 @@ namespace StrmAssistant.Common
             try
             {
                 var seconds = Math.Max(0, video.RunTimeTicks.GetValueOrDefault() / (double)TimeSpan.TicksPerSecond * options.ImageCapturePosition / 100);
-                var success = await CaptureRunner.Capture(encoder, input, output, seconds,
-                    video.Width > 0 && video.Height > video.Width, TimeSpan.FromSeconds(30), token).ConfigureAwait(false);
+                var discSource = DiscProbeApi.Enabled ? DiscProbeApi.Source(input) : null;
+                var disc = discSource == null ? null : DiscPlaylist.Read(discSource, token);
+                var portrait = video.Width > 0 && video.Height > video.Width;
+                var success = disc == null ? await CaptureRunner.Capture(encoder, input, output, seconds,
+                    portrait, TimeSpan.FromSeconds(30), token).ConfigureAwait(false) :
+                    await CaptureRunner.CaptureDisc(encoder, disc.Source, disc.Number, output, seconds,
+                        portrait, TimeSpan.FromSeconds(30), token).ConfigureAwait(false);
                 if (!success) { Plugin.Instance.Logger.Warn("FilmIndex: image capture failed or timed out for item {0}", video.InternalId); return; }
                 await _providers.SaveImage(video, _library.GetLibraryOptions(video), output, ImageType.Primary,
                     null, Array.Empty<long>(), directory, false, token).ConfigureAwait(false);

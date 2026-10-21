@@ -174,7 +174,7 @@ public sealed class Harness : IServerEntryPoint
             await CompletionChecks.Run(root, _library, _users, _userdata, options, SaveOptions, Check);
             await DistributedChecks.Run(root, movie, _users, _probe, options, SaveOptions, Check);
             await MultiVersionChecks.Run(root, _library, _users, _userdata, _files, options, SaveOptions, Check);
-            await LocalMetadataChecks.Run(root, movie, _library, _files, _providers, options, SaveOptions, Check);
+            await LocalMetadataChecks.Run(root, movie, _library, _files, _providers, _repository, options, SaveOptions, Check);
             NotificationChecks.Run(movie, _library, options, SaveOptions, Check);
             await PresentationChecks.Run(root, _library, _users, _userdata, _dto, _collections, options, SaveOptions, Check);
             await MetadataLanguageChecks.Run(root, _library, _providers, options, SaveOptions, Check);
@@ -185,6 +185,7 @@ public sealed class Harness : IServerEntryPoint
             await ArtworkChecks.Run(movie, _providers, options, SaveOptions, Check);
             await FingerprintChecks.Run(root, _library, _repository, options, SaveOptions, Check);
             await CancellationChecks.Run(Check);
+            await DiscChecks.Run(root, _probe, _library, _repository, options, SaveOptions, Check);
             await File.WriteAllTextAsync(Path.Combine(root, "report.json"), JsonSerializer.Serialize(new { success = true, checks = _checks }));
         }
         catch (Exception error)

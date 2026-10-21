@@ -18,9 +18,14 @@
     <EmbeddedResource Include="Web\Resources\strmassistant.js" />
     <EmbeddedResource Include="Data\OpenCC\*.txt" />
     <EmbeddedResource Include="$(NuGetPackageRoot)lib.harmony/2.3.6/lib/net8.0/0Harmony.dll" LogicalName="FilmIndex.Dependencies.0Harmony.dll" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)discutils.core/0.16.13/lib/net5.0/DiscUtils.Core.dll" LogicalName="FilmIndex.Dependencies.DiscUtils.Core.dll" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)discutils.streams/0.16.13/lib/net5.0/DiscUtils.Streams.dll" LogicalName="FilmIndex.Dependencies.DiscUtils.Streams.dll" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)discutils.iso9660/0.16.13/lib/net5.0/DiscUtils.Iso9660.dll" LogicalName="FilmIndex.Dependencies.DiscUtils.Iso9660.dll" />
+    <EmbeddedResource Include="$(NuGetPackageRoot)discutils.udf/0.16.13/lib/net5.0/DiscUtils.Udf.dll" LogicalName="FilmIndex.Dependencies.DiscUtils.Udf.dll" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony" Version="2.3.6" />
+    <PackageReference Include="DiscUtils.Udf" Version="0.16.13" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

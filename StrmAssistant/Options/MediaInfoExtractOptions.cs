@@ -11,6 +11,12 @@ namespace StrmAssistant.Options
 {
     public class MediaInfoExtractOptions : EditableOptionsBase
     {
+        [DisplayName("探测本地 Blu-ray ISO 和 BDMV")]
+        [Description("读取 UDF/MPLS 的主播放列表、准确时长、章节和音轨语言，使用支持 bluray 的探测程序。仅限未加密本地或已挂载路径。")]
+        public bool EnableDiscProbe { get; set; } = false;
+        [DisplayName("光盘专用 FFprobe 路径")]
+        [Description("留空使用 Emby 自带探测程序；可填写支持 Blu-ray 的可执行文件绝对路径，不填写命令参数。")]
+        public string DiscFfprobePath { get; set; } = string.Empty;
         [DisplayName("STRM 字幕按 IMDb 和季集信息搜索")]
         [Description("避免把 STRM 文本当作视频计算哈希。远程视频使用 IMDb/季集信息匹配；原生字幕账号和下载权限保持有效。")]
         public bool OptimizeStrmSubtitleSearch { get; set; } = false;

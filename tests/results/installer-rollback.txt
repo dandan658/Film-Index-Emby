@@ -1,0 +1,2 @@
+17 installer/rollback checks passed with BusyBox; this is not fnOS/Linux certification.
+Fixture retained: C:\Users\Franklin\Documents\Codex\2026-10-19\https-github-com-kokojacket-baidu-autosave\work\emby-sdk\film-index-install-test-0ad037cb883c451183255434459ccac3

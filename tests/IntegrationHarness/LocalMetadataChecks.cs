@@ -12,7 +12,7 @@ namespace FilmIndex.IntegrationTests;
 internal static class LocalMetadataChecks
 {
     public static async Task Run(string root, Movie movie, ILibraryManager library, IFileSystem files, MediaBrowser.Controller.Providers.IProviderManager providers,
-        PluginOptions options, Action<PluginOptions> save, Action<bool,string> check)
+        MediaBrowser.Controller.Persistence.IItemRepository repository, PluginOptions options, Action<PluginOptions> save, Action<bool,string> check)
     {
         options.MetadataEnhanceOptions.LocalMetadataRoot = Path.Combine(root, "local-metadata");
         options.MetadataEnhanceOptions.LocalMetadataMode = LocalMetadataMode.OnlineAndCache; save(options);
@@ -26,7 +26,7 @@ internal static class LocalMetadataChecks
             "Local metadata writes an atomic language-specific cache under the exact TMDB ID");
         var overridden = Path.Combine(options.MetadataEnhanceOptions.LocalMetadataRoot, "override", relative);
         Directory.CreateDirectory(Path.GetDirectoryName(overridden)!);
-        const string text = """{"id":999999998,"title":"本地覆盖标题","overview":"自定义简介","release_date":"2024-01-02","genres":[{"name":"动画"}]}""";
+        const string text = """{"id":999999998,"title":"本地覆盖标题","overview":"自定义简介","release_date":"2024-01-02","genres":[{"name":"动画"}],"people":[{"name":"缓存演员","role":"缓存角色","type":"Actor","provider_ids":{"Tmdb":"990099","Imdb":"nm1234567"}}]}""";
         await File.WriteAllTextAsync(overridden, text);
         check(await LocalMetadataStore.Process(movie, CancellationToken.None) && movie.Name == "本地覆盖标题" && movie.Genres.Contains("动画"),
             "Local TMDB-compatible override applies title, overview, release date and genres");
@@ -72,6 +72,18 @@ internal static class LocalMetadataChecks
                 ImageRefreshMode = MediaBrowser.Controller.Providers.MetadataRefreshMode.ValidationOnly, ForceSave = true },
             library.GetCollectionFolders(movie).ToArray(), nativeOptions, CancellationToken.None);
         check(library.GetItemById(movie.Id).Name == "Native pipeline title", "Native Emby metadata refresh discovers and applies the local metadata provider");
+        var credits = repository.GetItemPeople(new MediaBrowser.Controller.Entities.InternalPeopleQuery { ItemIds = new[] { movie.InternalId }, EnableProviderIds = true, EnableIds = true }, CancellationToken.None);
+        check(credits.Any(person => person.Name == "缓存演员" && person.Role == "缓存角色" && person.ProviderIds["Tmdb"] == "990099" && person.ProviderIds["Imdb"] == "nm1234567"),
+            "Native local-metadata refresh persists cached cast names, roles and external person IDs");
+        movie.LockedFields = new[] { MetadataFields.Cast };
+        var lockedCast = new List<MediaBrowser.Controller.Entities.PersonInfo> { new() { Name = "保留演员", Type = PersonType.Actor } };
+        await LocalMetadataStore.Process(movie, CancellationToken.None, lockedCast);
+        check(lockedCast.Single().Name == "保留演员", "Local metadata preserves individually locked cast data");
+        movie.LockedFields = Array.Empty<MetadataFields>();
+        await File.WriteAllTextAsync(overridden, text.Replace("缓存演员", ""));
+        movie.Name = "Before malformed cast";
+        check(!await LocalMetadataStore.Process(movie, CancellationToken.None, lockedCast) && movie.Name == "Before malformed cast" && lockedCast.Single().Name == "保留演员",
+            "Malformed cached cast is rejected before either title or cast is changed");
         options.MetadataEnhanceOptions.LocalMetadataMode = LocalMetadataMode.Off; save(options);
         movie.Name = "Off title";
         check(!await LocalMetadataStore.Process(movie, CancellationToken.None) && movie.Name == "Off title", "Disabling local metadata leaves native metadata processing unchanged");

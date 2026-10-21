@@ -5,6 +5,7 @@ using MediaBrowser.Model.Entities;
 using StrmAssistant.Options;
 using System;
 using System.Globalization;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -43,8 +44,9 @@ namespace StrmAssistant.Common
             return await JsonNode.ParseAsync(input, cancellationToken: token).ConfigureAwait(false) as JsonObject
                 ?? throw new InvalidDataException("Metadata root must be an object");
         }
-        public static JsonObject Snapshot(BaseItem item) => new JsonObject
+        public static JsonObject Snapshot(BaseItem item, IEnumerable<PersonInfo> people = null)
         {
+            var snapshot = new JsonObject {
             ["id"] = item.GetProviderId(MetadataProviders.Tmdb), ["name"] = item.Name,
             ["original_name"] = item.OriginalTitle, ["overview"] = item.Overview, ["tagline"] = item.Tagline,
             ["vote_average"] = item.CommunityRating, ["air_date"] = item.PremiereDate?.ToString("O"),
@@ -58,7 +60,13 @@ namespace StrmAssistant.Common
             ["sort_episode_number"] = item is Episode sorted ? sorted.SortIndexNumber : null,
             ["sort_season_number"] = item is Episode parentSorted ? parentSorted.SortParentIndexNumber : null,
             ["genres"] = JsonSerializer.SerializeToNode(item.Genres), ["tags"] = JsonSerializer.SerializeToNode(item.Tags)
-        };
+            };
+            if (people != null) snapshot["people"] = new JsonArray(people.Select(person => (JsonNode)new JsonObject {
+                ["name"] = person.Name, ["role"] = person.Role, ["type"] = person.Type.ToString(),
+                ["provider_ids"] = JsonSerializer.SerializeToNode(person.ProviderIds)
+            }).ToArray());
+            return snapshot;
+        }
         public static JsonObject MergePatch(JsonObject original, JsonObject patch)
         {
             var result = (JsonObject)original.DeepClone();
@@ -132,7 +140,31 @@ namespace StrmAssistant.Common
             if (item is Episode episode && Number(json, "episode_number") is int actualEpisode && actualEpisode != episode.IndexNumber)
                 throw new InvalidDataException("Cached episode identity conflicts with the item");
         }
-        public static async Task<bool> Process(BaseItem item, CancellationToken token)
+        private static List<PersonInfo> People(JsonObject json)
+        {
+            if (json["people"] == null) return null;
+            if (json["people"] is not JsonArray entries || entries.Count > 10000) throw new InvalidDataException("Invalid cached people list");
+            var people = new List<PersonInfo>();
+            foreach (var node in entries)
+            {
+                if (node is not JsonObject entry || Text(entry, "name") is not string name || string.IsNullOrWhiteSpace(name) || name.Length > 1000 ||
+                    !Enum.TryParse<PersonType>(Text(entry, "type"), out var type) || !Enum.IsDefined(type)) throw new InvalidDataException("Invalid cached person");
+                var role = Text(entry, "role"); if (role?.Length > 1000) throw new InvalidDataException("Cached role exceeds size limit");
+                var person = new PersonInfo { Name = name, Role = role, Type = type, ProviderIds = new ProviderIdDictionary() };
+                if (entry["provider_ids"] is JsonObject ids)
+                    foreach (var pair in ids)
+                    {
+                        var value = StringValue(pair.Value);
+                        if (value == null) continue;
+                        var valid = pair.Key.Equals("Imdb", StringComparison.OrdinalIgnoreCase) ? Regex.IsMatch(value, @"^nm\d{5,12}$", RegexOptions.CultureInvariant) :
+                            (pair.Key.Equals("Tmdb", StringComparison.OrdinalIgnoreCase) || pair.Key.Equals("Douban", StringComparison.OrdinalIgnoreCase)) && Regex.IsMatch(value, @"^[1-9]\d{0,11}$", RegexOptions.CultureInvariant);
+                        if (valid) person.ProviderIds[pair.Key] = value;
+                    }
+                people.Add(person);
+            }
+            return people;
+        }
+        public static async Task<bool> Process(BaseItem item, CancellationToken token, IList<PersonInfo> people = null)
         {
             var options = Plugin.Instance.GetPluginOptions().MetadataEnhanceOptions;
             if (options.LocalMetadataMode == LocalMetadataMode.Off || !Path.IsPathFullyQualified(options.LocalMetadataRoot)) return false;
@@ -149,19 +181,22 @@ namespace StrmAssistant.Common
                 if (patch != null) json = MergePatch(json ?? Snapshot(item), patch);
                 if (json != null)
                 {
+                    var cachedPeople = People(json);
                     if (item is Movie || item is Series || item is BoxSet)
                     {
                         var id = json["id"]?.ToString();
                         if (id != null && id != item.GetProviderId(MetadataProviders.Tmdb)) throw new InvalidDataException("Metadata ID does not match the item");
                     }
                     Apply(item, json);
+                    if (cachedPeople != null && people != null && !item.IsLocked && item.LockedFields?.Contains(MetadataFields.Cast) != true)
+                    { people.Clear(); foreach (var person in cachedPeople) people.Add(person); }
                     applied = !item.IsLocked;
                 }
                 if (options.LocalMetadataMode == LocalMetadataMode.PreferCache || options.LocalMetadataMode == LocalMetadataMode.OnlineAndCache)
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(cached));
                     var temp = cached + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                    try { await File.WriteAllTextAsync(temp, Snapshot(item).ToJsonString(new JsonSerializerOptions { WriteIndented = true }), token).ConfigureAwait(false); File.Move(temp, cached, true); }
+                    try { await File.WriteAllTextAsync(temp, Snapshot(item, people).ToJsonString(new JsonSerializerOptions { WriteIndented = true }), token).ConfigureAwait(false); File.Move(temp, cached, true); }
                     finally { if (File.Exists(temp)) File.Delete(temp); }
                 }
                 return applied;

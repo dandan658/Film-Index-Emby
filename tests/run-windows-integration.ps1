@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory=$true)][string]$EmbySystemPath,
     [string]$DotNet = 'dotnet',
-    [string]$FixtureParent = $env:TEMP
+    [string]$FixtureParent = $env:TEMP,
+    [string]$DiscFixturePath
 )
 $ErrorActionPreference = 'Stop'
 $taskBase = (Resolve-Path -LiteralPath $FixtureParent).Path
@@ -12,6 +13,7 @@ if ($LASTEXITCODE) { throw 'Harness build failed' }
 $taskRoot = Join-Path $taskBase ('film-index-integration-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $taskRoot,(Join-Path $taskRoot 'music'),(Join-Path $taskRoot 'movies'),(Join-Path $taskRoot 'state/config'),(Join-Path $taskRoot 'state/plugins') | Out-Null
 Set-Content (Join-Path $taskRoot '.fixture-only') 'isolated generated media only'
+if ($DiscFixturePath) { Copy-Item -LiteralPath (Resolve-Path -LiteralPath $DiscFixturePath).Path -Destination (Join-Path $taskRoot 'disc-fixture') -Recurse }
 $taskEncoder = Join-Path $taskSystem 'ffmpeg.exe'
 & $taskEncoder -nostdin -hide_banner -loglevel error -y -f lavfi -i 'color=c=blue:s=720x480:r=10' -f lavfi -i 'anullsrc=r=44100:cl=stereo' -t 3 -c:v mpeg4 -c:a aac -threads 1 (Join-Path $taskRoot 'movies/fixture.mp4')
 if ($LASTEXITCODE) { throw 'video fixture generation failed' }

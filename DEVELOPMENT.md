@@ -6,7 +6,8 @@ Target: Emby **4.10.1.0**. Build: **0.1.0.0-development**. GPL community derivat
 
 - Exact official 4.10.1.0 compilation passes, using both portable and Windows reference distributions.
 - **49** assembly, rule and real-FFmpeg checks pass.
-- **117** fixture integration/contract checks pass inside isolated official Windows 4.10.1.0.
+- **132** fixture integration/contract checks pass inside isolated official Windows 4.10.1.0.
+- **17** installer/rollback checks pass under Windows BusyBox, including corruption refusal and native database preservation.
 - **8** JavaScript assertions pass; the generated native module also passes Node syntax validation.
 - Reports: `tests/results/`. These numbers are not feature counts or proof of full parity.
 - Generated media and disposable accounts only; no production NAS was accessed.
@@ -17,7 +18,7 @@ Target: Emby **4.10.1.0**. Build: **0.1.0.0-development**. GPL community derivat
 
 Exact-version API fixes; keyword/tag extraction exclusions; managed OpenCC conversion; music metadata/cover/stream persistence; external audio and subtitle scanning with failure preservation; permission-preserving Chinese title search; native proxy routing and scoped credentials; custom UDP discovery; same-user completion progress handling; selected-item cleanup; real FFmpeg capture with framing, cancellation, timeout and atomic output; authenticated extraction worker with root/identity/size validation and fallback; cross-library progress/favorite separation through actual physical library roots; version labels/quality ordering and configurable folder merge limit.
 
-Local metadata supports Movie/Series/Season/Episode/BoxSet cache and overrides, patches, field locks, local artwork, external IDs, official/critic ratings, studios, production locations and special-episode display ordering. Conflicting identities are rejected before mutation. This normalized format does not claim full upstream cache compatibility.
+Local metadata preserves cast names, roles and known external person IDs through native refresh, respecting cast locks and rejecting malformed credits before changing fields. It supports Movie/Series/Season/Episode/BoxSet cache and overrides, patches, field locks, local artwork, external IDs, official/critic ratings, studios, production locations and special-episode display ordering. Conflicting identities are rejected before mutation. This normalized format does not claim full upstream cache compatibility.
 
 Presentation adds search-history suppression, series/season episode totals, per-user library badges, descending seasons/episodes, season-linked collections and separate web season/episode styles. Web code wraps the installed native module; no copied Emby module is distributed. Reverse log viewing preserves stack traces, admin authorization and native sanitization; raw downloads stay chronological.
 
@@ -33,14 +34,17 @@ Douban supports independent JSON-LD parsing, subject/IMDb cache lookup, offline 
 
 Notifications use a recording native-interface sink; external delivery is untested. Distributed extraction uses an actual HTTP round trip inside one fixture server; cross-host operation is untested.
 
+Local unencrypted Blu-ray UDF ISO/BDMV extraction now reads the main MPLS playlist, exact duration, chapters and PID-bound language tags without extracting the video files. Real self-authored discs exercise the native probe normalizer, database persistence, selected-playlist cover capture and recovery sidecar. A repeated-timestamp sample demonstrates a native MPEG-TS estimate near 10 seconds versus the correct 185-second MPLS duration. Bad-image preflight preserves existing records and avoids misleading sidecars. Optional managed DiscUtils 0.16.13 dependencies are embedded with their MIT notice; tsMuxer 2.7.0 is a test-only fixture author. HTTP ISO is explicitly skipped; DVD, complex DV P7 and native disc chapter/BIF capture remain incomplete.
+
+Installer draft and file-manager instructions are in `packaging/`. Installation checks SHA-256 and saves previous DLL/settings; rollback verifies backups and first preserves the replaced version. These are plugin-only backups, not native database backups. Full Emby data snapshots must be taken with the server stopped before changes that affect database content. No complete archive is released.
 ## Remaining work — release is NOT complete
 
-1. ISO/BDMV media information, MPLS/audio/subtitle details, DV P7, custom encoder chapter/BIF paths and real disc fixtures.
+1. HTTP ISO, DVD, advanced DV P7, multi-angle/complex disc acceptance, custom encoder chapter/BIF paths and broader disc fixtures.
 2. Complete Douban IMDb discovery, season-table construction, cast localization, poster fallback and richer rating update behavior; live acceptance.
-3. Full local metadata people, groups, advanced ratings, special ordering compatibility and persistent image cache.
+3. Person biography/image caches, groups, advanced ratings, special ordering compatibility and persistent image cache.
 4. Live second-source marker import, full-season fingerprint matching, broader parallel cancellation/load acceptance.
 5. Actual OpenSubtitles download, notification delivery and native DOM/client UI acceptance.
-6. Linux/fnOS verification, installation/backup/rollback scripts, archive/license/source/hash validation.
+6. Linux/fnOS verification, full archive/license/source/hash validation and installation/rollback acceptance on fnOS.
 
 **No complete installation archive is produced or delivered. Do not relabel this checkpoint as full parity.**
 
@@ -51,7 +55,8 @@ https://github.com/MediaBrowser/Emby.Releases/releases/tag/4.10.1.0
 
 ```powershell
 dotnet build ./StrmAssistant/StrmAssistant.csproj -c Release -p:EmbyServerPath=C:/path/to/emby/system
-./tests/run-windows-integration.ps1 -EmbySystemPath C:/path/to/windows/emby/system -DotNet C:/path/to/dotnet.exe
+./tests/create-disc-fixtures.ps1 -Ffmpeg C:/path/to/ffmpeg.exe -TsMuxer C:/path/to/tsMuxeR.exe -OutputDirectory C:/new-disc-fixtures
+./tests/run-windows-integration.ps1 -EmbySystemPath C:/path/to/windows/emby/system -DotNet C:/path/to/dotnet.exe -DiscFixturePath C:/new-disc-fixtures
 node --check C:/fixture-root/listcontroller-patched.js
 node ./tests/web-presentation.cjs C:/fixture-root
 dotnet run --project ./tests/Compatibility -- C:/path/to/emby/system ./StrmAssistant/bin/Release/net8.0 C:/path/to/ffmpeg.exe

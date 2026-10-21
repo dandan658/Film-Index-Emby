@@ -57,7 +57,7 @@ namespace StrmAssistant.Common
                             : (MediaContainers?)null)
                     .Where(container => container.HasValue)
                     .Select(container => container.Value)
-                    .Concat(new[] { MediaContainers.Iso })
+                    .Concat(DiscProbeApi.Enabled ? Array.Empty<MediaContainers>() : new[] { MediaContainers.Iso })
                     .Distinct()
                     .ToArray();
             }
@@ -80,7 +80,7 @@ namespace StrmAssistant.Common
 
                         return Array.Empty<string>();
                     })
-                    .Concat(MediaContainers.Iso.GetAliases())
+                    .Concat(DiscProbeApi.Enabled ? Array.Empty<string>() : MediaContainers.Iso.GetAliases())
                     .Where(alias => !string.IsNullOrWhiteSpace(alias))
                     .Distinct()
                     .ToArray();
@@ -658,7 +658,10 @@ namespace StrmAssistant.Common
 
             if (string.IsNullOrEmpty(filePath)) return null;
 
-            var fileExtension = Path.GetExtension(filePath).TrimStart('.');
+            var extensionPath = Uri.TryCreate(filePath, UriKind.Absolute, out var extensionUri) && !extensionUri.IsFile ? extensionUri.AbsolutePath : filePath;
+            var fileExtension = Path.GetExtension(extensionPath).TrimStart('.');
+            if (DiscProbeApi.Enabled && fileExtension.Equals("iso", StringComparison.OrdinalIgnoreCase) && DiscProbeApi.Source(filePath) == null)
+            { _logger.Warn("FilmIndex: remote ISO extraction is not supported by the local disc adapter; item {0} skipped", taskItem.InternalId); return null; }
             var extractSkip = mediaInfoRestoreMode || ExcludeMediaExtensions.Contains(fileExtension);
 
             var refreshOptions = Plugin.MediaInfoApi.GetMediaInfoRefreshOptions();
@@ -706,9 +709,11 @@ namespace StrmAssistant.Common
 
             if (extractSkip) return null;
 
+            // A failed disc probe must surface before the native refresh can swallow a provider error.
+            var discInfo = await DiscProbeApi.Prepare(filePath, cancellationToken).ConfigureAwait(false);
             taskItem.DateLastRefreshed = new DateTimeOffset();
 
-            var remoteInfo = await RemoteProbeClient.TryGet(taskItem, filePath, cancellationToken).ConfigureAwait(false);
+            var remoteInfo = discInfo ?? await RemoteProbeClient.TryGet(taskItem, filePath, cancellationToken).ConfigureAwait(false);
             using (RemoteProbeBridge.Enter(remoteInfo, filePath))
                 await _providerManager
                     .RefreshSingleItem(taskItem, refreshOptions, collectionFolders, dummyLibraryOptions, cancellationToken)

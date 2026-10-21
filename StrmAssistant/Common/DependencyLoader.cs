@@ -15,12 +15,12 @@ namespace StrmAssistant.Common
             if (context == null) return;
             context.Resolving += (_, name) =>
             {
-                if (!string.Equals(name.Name, "0Harmony", StringComparison.Ordinal)) return null;
+                if (name.Name != "0Harmony" && name.Name != "DiscUtils.Core" && name.Name != "DiscUtils.Streams" && name.Name != "DiscUtils.Iso9660" && name.Name != "DiscUtils.Udf") return null;
                 lock (own)
                 {
                     foreach (var assembly in context.Assemblies)
                         if (assembly.GetName().Name == name.Name && assembly.GetName().Version == name.Version) return assembly;
-                    using var stream = own.GetManifestResourceStream("FilmIndex.Dependencies.0Harmony.dll");
+                    using var stream = own.GetManifestResourceStream("FilmIndex.Dependencies." + name.Name + ".dll");
                     return stream == null ? null : context.LoadFromStream(stream);
                 }
             };

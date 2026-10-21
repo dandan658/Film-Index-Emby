@@ -63,7 +63,7 @@ namespace StrmAssistant
         public static MetadataApi MetadataApi { get; private set; }
         public static VideoThumbnailApi VideoThumbnailApi { get; private set; }
 
-        private readonly Guid _id = new Guid("63c322b7-a371-41a3-b11f-04f8418b37d8");
+        private readonly Guid _id = new Guid("39c8f456-92d0-4424-a88b-91962aa3ccfe");
 
         public readonly ILogger Logger;
         public readonly IApplicationHost ApplicationHost;
@@ -335,7 +335,7 @@ namespace StrmAssistant
 
         public override Guid Id => _id;
 
-        public sealed override string Name => "Strm Assistant";
+        public sealed override string Name => "Film Index Emby";
 
         public string CurrentVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString();
 

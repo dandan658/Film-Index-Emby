@@ -14,6 +14,14 @@ namespace StrmAssistant.Options
         [DisplayNameL("PluginOptions_EditorTitle_Strm_Extract", typeof(Resources))]
         public override string EditorTitle => Resources.PluginOptions_EditorTitle_Strm_Extract;
 
+        [DisplayName("提取排除关键词")]
+        [Description("按名称或路径匹配，多个词用分号分隔。影响媒体信息、片头声纹和预览图提取；留空关闭。")]
+        public string ExcludedExtractionKeywords { get; set; } = string.Empty;
+
+        [DisplayName("提取排除标签")]
+        [Description("标签完整匹配，多个标签用分号分隔。不区分大小写，留空关闭。")]
+        public string ExcludedExtractionTags { get; set; } = string.Empty;
+
         [DisplayNameL("PluginOptions_IncludeExtra_Include_Extra", typeof(Resources))]
         [DescriptionL("PluginOptions_IncludeExtra_Include_media_extras_to_extract__Default_is_False_", typeof(Resources))]
         [Required]

@@ -1,13 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
-    <AssemblyVersion>2.0.0.27</AssemblyVersion>
-    <FileVersion>2.0.0.27</FileVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
     <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
-    <AssemblyName>$(MSBuildProjectName)Lite</AssemblyName>
+    <AssemblyName>FilmIndex.Emby</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="ScheduledTask\UpdatePluginTask.cs" />
     <None Remove="Web\Resources\shortcuts.js" />
     <None Remove="Web\Resources\strmassistant.js" />
   </ItemGroup>
@@ -23,12 +24,16 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="mediabrowser.server.core" Version="4.8.0.80" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Resource.Embedder" Version="2.2.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EmbyServerPath)' != ''">
+    <Reference Include="$(EmbyServerPath)/MediaBrowser.*.dll;$(EmbyServerPath)/Emby.*.dll;$(EmbyServerPath)/ServiceStack*.dll">
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
@@ -49,7 +54,10 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(InstallIntoLocalEmby)' == 'true'">
     <Exec Command="$(ILRepack) /out:%25AppData%25\Emby-Server\programdata\plugins\$(TargetFileName) $(TargetPath) $(TargetDir)ChineseConverter.dll /lib:$(TargetDir)" />
+  </Target>
+  <Target Name="RequireExactServer" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(EmbyServerPath)/MediaBrowser.Controller.dll')" Text="Set EmbyServerPath to the official Emby 4.10.1.0 system directory. Server assemblies are build references only and must not be redistributed." />
   </Target>
 </Project>

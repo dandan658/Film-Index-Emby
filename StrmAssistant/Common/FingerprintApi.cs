@@ -102,6 +102,7 @@ namespace StrmAssistant.Common
         public Task<Tuple<string, bool>> CreateTitleFingerprint(Episode item, IDirectoryService directoryService,
             CancellationToken cancellationToken)
         {
+            if (ExtractionPolicy.IsExcluded(item)) return Task.FromResult(Tuple.Create(string.Empty, false));
             var libraryOptions = _libraryManager.GetLibraryOptions(item);
 
             return (Task<Tuple<string, bool>>)_createTitleFingerprint.Invoke(_audioFingerprintManager,
@@ -115,24 +116,26 @@ namespace StrmAssistant.Common
             return CreateTitleFingerprint(item, directoryService, cancellationToken);
         }
 
-        private Task<object> GetAllFingerprintFilesForSeason(Season season, Episode[] episodes,
+        private async Task<object> GetAllFingerprintFilesForSeason(Season season, Episode[] episodes,
             LibraryOptions libraryOptions, IDirectoryService directoryService, CancellationToken cancellationToken)
         {
-            return (Task<object>)_getAllFingerprintFilesForSeason.Invoke(_audioFingerprintManager,
+            var task = (Task)_getAllFingerprintFilesForSeason.Invoke(_audioFingerprintManager,
                 new object[] { season, episodes, libraryOptions, directoryService, cancellationToken });
+            await task.ConfigureAwait(false);
+            return task.GetType().GetProperty("Result").GetValue(task);
         }
 
         private void UpdateSequencesForSeason(Season season, object seasonFingerprintInfo, Episode episode,
             LibraryOptions libraryOptions, IDirectoryService directoryService)
         {
             _updateSequencesForSeason.Invoke(_audioFingerprintManager,
-                new[] { season, seasonFingerprintInfo, episode, libraryOptions, directoryService });
+                new object[] { season, seasonFingerprintInfo, episode, libraryOptions, directoryService, CancellationToken.None });
         }
 
         public void PatchTimeout(int maxConcurrentCount)
         {
             var newTimeout = maxConcurrentCount * Convert.ToInt32(TimeSpan.FromMinutes(10.0).TotalMilliseconds);
-            _timeoutMs.SetValue(_audioFingerprintManager, newTimeout);
+            _timeoutMs?.SetValue(_audioFingerprintManager, newTimeout);
         }
 
         public bool IsLibraryInScope(BaseItem item)
@@ -382,6 +385,7 @@ namespace StrmAssistant.Common
             foreach (var episode in episodesWithoutMarkers)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (ExtractionPolicy.IsExcluded(episode)) continue;
                 UpdateSequencesForSeason(season, seasonFingerprintInfo, episode, libraryOptions, directoryService);
 
                 index++;

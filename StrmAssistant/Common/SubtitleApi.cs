@@ -53,7 +53,7 @@ namespace StrmAssistant.Common
                 {
                     localizationManager, fileSystem, libraryManager
                 });
-                _getExternalSubtitleStreams = subtitleResolverType.GetMethod("GetExternalSubtitleStreams");
+                _getExternalSubtitleStreams = subtitleResolverType.GetMethod("GetExternalTracks");
 
                 var ffProbeSubtitleInfoType = embyProviders.GetType("Emby.Providers.MediaInfo.FFProbeSubtitleInfo");
                 var ffProbeSubtitleInfoConstructor = ffProbeSubtitleInfoType.GetConstructor(new[]
@@ -85,7 +85,7 @@ namespace StrmAssistant.Common
             var namingOptions = _libraryManager.GetNamingOptions();
 
             return (List<MediaStream>)_getExternalSubtitleStreams.Invoke(_subtitleResolver,
-                new object[] { item, startIndex, directoryService, namingOptions, clearCache });
+                new object[] { item, startIndex, directoryService, _libraryManager.GetLibraryOptions(item), namingOptions, clearCache });
         }
 
         private Task<bool> UpdateExternalSubtitleStream(BaseItem item,
@@ -113,7 +113,9 @@ namespace StrmAssistant.Common
 
         public bool HasExternalSubtitleChanged(BaseItem item, IDirectoryService directoryService, bool clearCache)
         {
-            var currentExternalSubtitleFiles = _libraryManager.GetExternalSubtitleFiles(item.InternalId);
+            var currentExternalSubtitleFiles = item.GetMediaStreams()
+                .Where(stream => stream.Type == MediaStreamType.Subtitle && stream.IsExternal)
+                .Select(stream => stream.Path).Where(path => !string.IsNullOrEmpty(path));
             var currentSet = new HashSet<string>(currentExternalSubtitleFiles, StringComparer.Ordinal);
 
             try

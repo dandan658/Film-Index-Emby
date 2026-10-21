@@ -65,10 +65,10 @@ namespace StrmAssistant.Common
                         .GetMethod("GetStaticMediaSources",
                             new[]
                             {
-                                typeof(BaseItem), typeof(bool), typeof(bool), typeof(bool), typeof(LibraryOptions),
+                                typeof(BaseItem), typeof(bool), typeof(bool), typeof(bool), typeof(BaseItem[]), typeof(LibraryOptions),
                                 typeof(DeviceProfile), typeof(User)
                             });
-                    _fallbackApproach = true;
+                    _fallbackApproach = _getStaticMediaSources != null;
                 }
                 catch (Exception e)
                 {
@@ -85,43 +85,21 @@ namespace StrmAssistant.Common
                 }
             }
 
-            try
-            {
-                var embyServerImplementationsAssembly = Assembly.Load("Emby.Server.Implementations");
-                var libraryMonitorImpl =
-                    embyServerImplementationsAssembly.GetType("Emby.Server.Implementations.IO.LibraryMonitor");
-                var alwaysIgnoreExtensions = libraryMonitorImpl.GetField("_alwaysIgnoreExtensions",
-                    BindingFlags.Instance | BindingFlags.NonPublic);
-                var currentArray = (string[])alwaysIgnoreExtensions.GetValue(libraryMonitor);
-                var newArray = new string[currentArray.Length + 1];
-                Array.Copy(currentArray, newArray, currentArray.Length);
-                newArray[newArray.Length - 1] = ".json";
-                alwaysIgnoreExtensions.SetValue(libraryMonitor, newArray);
-            }
-            catch (Exception e)
-            {
-                if (Plugin.Instance.DebugMode)
-                {
-                    _logger.Debug(e.Message);
-                    _logger.Debug(e.StackTrace);
-                }
-
-                _logger.Warn($"{nameof(MediaInfoApi)} Init Failed");
-            }
+            // Emby 4.10 owns its monitor extension policy; do not mutate private server fields.
         }
 
         private List<MediaSourceInfo> GetStaticMediaSourcesByApi(BaseItem item, bool enableAlternateMediaSources,
             LibraryOptions libraryOptions)
         {
             return _mediaSourceManager.GetStaticMediaSources(item, enableAlternateMediaSources, false,
-                libraryOptions, null, null);
+                null, null);
         }
 
         private List<MediaSourceInfo> GetStaticMediaSourcesByRef(BaseItem item, bool enableAlternateMediaSources,
             LibraryOptions libraryOptions)
         {
             return (List<MediaSourceInfo>)_getStaticMediaSources.Invoke(_mediaSourceManager,
-                new object[] { item, enableAlternateMediaSources, false, false, libraryOptions, null, null });
+                new object[] { item, enableAlternateMediaSources, false, false, null, libraryOptions, null, null });
         }
 
         public List<MediaSourceInfo> GetStaticMediaSources(BaseItem item, bool enableAlternateMediaSources)

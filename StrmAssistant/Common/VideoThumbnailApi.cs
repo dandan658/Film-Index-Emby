@@ -77,6 +77,7 @@ namespace StrmAssistant.Common
             IDirectoryService directoryService, List<ChapterInfo> chapters, bool extractImages, bool saveChapters,
             CancellationToken cancellationToken)
         {
+            if (ExtractionPolicy.IsExcluded(item)) return Task.FromResult(false);
             var mediaSource = AppVer >= Ver4936
                 ? item.GetMediaSources(false, false, libraryOptions).FirstOrDefault()
                 : null;
@@ -85,7 +86,7 @@ namespace StrmAssistant.Common
                 ? new object[]
                 {
                     item, mediaSource, null, libraryOptions, directoryService, chapters, extractImages,
-                    saveChapters, cancellationToken
+                    false, saveChapters, cancellationToken
                 }
                 : new object[]
                 {

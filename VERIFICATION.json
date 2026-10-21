@@ -1,0 +1,15 @@
+{
+  "product": "Film Index Emby",
+  "version": "0.1.0.0-development",
+  "target": "4.10.1.0",
+  "upstream_revision": "beb65cf8e4d7b19ce418c3aa32cfb6eff04acfb2",
+  "build": "passed against exact official Windows server assemblies",
+  "assembly_and_rule_checks_passed": 18,
+  "startup_smoke": "adapted baseline loaded and official Windows server startup completed; public API confirmed 4.10.1.0",
+  "integration_tests": "media operations and latest blacklist UI not tested end to end",
+  "deployment_target": "fnOS Docker; user-supplied amilys/embyserver 4.10.1.0",
+  "linux_image_tested": false,
+  "full_pro_feature_parity": false,
+  "ready_for_installation": false,
+  "production_data_accessed": false
+}

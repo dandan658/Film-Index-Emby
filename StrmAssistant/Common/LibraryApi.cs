@@ -645,6 +645,7 @@ namespace StrmAssistant.Common
 
         public async Task<bool?> OrchestrateMediaInfoProcessAsync(BaseItem taskItem, string source, CancellationToken cancellationToken)
         {
+            if (ExtractionPolicy.IsExcluded(taskItem)) return null;
             var persistMediaInfoMode = Plugin.Instance.GetPluginOptions().MediaInfoExtractOptions.PersistMediaInfoMode;
             var persistMediaInfo = taskItem is Video && persistMediaInfoMode != PersistMediaInfoOption.None.ToString();
             var mediaInfoRestoreMode = persistMediaInfoMode == PersistMediaInfoOption.Restore.ToString();
@@ -816,11 +817,11 @@ namespace StrmAssistant.Common
 
         public async Task<string> GetStrmMountPath(string strmPath)
         {
-            var path = strmPath.AsMemory();
+            var path = strmPath;
 
             using var mediaMount = await _mediaMountManager.Mount(path, null, CancellationToken.None);
             
-            return mediaMount?.MountedPath;
+            return mediaMount?.MountedPathInfo?.FullName;
         }
 
         public BaseItem[] GetItemsByIds(long[] itemIds)

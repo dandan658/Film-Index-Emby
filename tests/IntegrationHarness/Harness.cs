@@ -117,6 +117,13 @@ public sealed class Harness : IServerEntryPoint
             Check(streams.Any(stream => stream.Type == MediaStreamType.Subtitle && stream.IsExternal), "External subtitle is persisted in the real stream repository");
             Check(streams.Any(stream => stream.Type == MediaStreamType.Audio && stream.IsExternal && !string.IsNullOrWhiteSpace(stream.Codec)), "External audio is probed and persisted");
             Check(streams.Select(stream => stream.Index).Distinct().Count() == streams.Count, "External streams have unique indexes");
+            options.MediaInfoExtractOptions.EnableImageCapture = true; SaveOptions(options);
+            Plugin.LibraryApi.UpdateDateModifiedLastSaved(movie, directory);
+            Check(await Plugin.MediaInfoApi.SerializeMediaInfo(movie.InternalId, directory, true, "capture cache fixture"), "Video capture fixture persists a current media-info cache");
+            var cacheResult = await Plugin.LibraryApi.OrchestrateMediaInfoProcessAsync(movie, "capture cache fixture", CancellationToken.None);
+            Check(cacheResult == false && _library.GetItemById(movie.InternalId).HasImage(ImageType.Primary),
+                "A media-info cache hit still generates a missing primary image through real FFmpeg");
+            options.MediaInfoExtractOptions.EnableImageCapture = false; SaveOptions(options);
             var previous = streams.Select(stream => (stream.Type, stream.Index, stream.Path)).ToArray();
             await File.WriteAllTextAsync(Path.Combine(moviePath, "fixture.en.mka"), "invalid audio fixture");
             var failed = false;

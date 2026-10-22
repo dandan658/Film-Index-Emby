@@ -117,12 +117,13 @@ namespace StrmAssistant.Common
 
         public void UpdateLibraryPathsInScope()
         {
+            var configuredScope = Plugin.Instance.GetPluginOptions().MediaInfoExtractOptions.LibraryScope;
             var validLibraryIds =
-                GetValidLibraryIds(Plugin.Instance.GetPluginOptions().MediaInfoExtractOptions.LibraryScope);
+                GetValidLibraryIds(configuredScope);
 
             var libraries = _libraryManager.GetVirtualFolders()
                 .Where(f => !ExcludedCollectionTypes.Contains(f.CollectionType) &&
-                            (!validLibraryIds.Any() || validLibraryIds.Contains(f.Id)))
+                            (string.IsNullOrWhiteSpace(configuredScope) || validLibraryIds.Contains(f.Id)))
                 .ToList();
 
             LibraryPathsInScope = libraries.SelectMany(l => l.Locations)
@@ -284,7 +285,7 @@ namespace StrmAssistant.Common
             var items = Array.Empty<BaseItem>();
             var extras = Array.Empty<BaseItem>();
 
-            if (!libraryIds.Any() || libraryIds.Any(id => id != "-1"))
+            if (!libraryIds.Any() || libraries.Any())
             {
                 var itemsMediaInfoQuery = new InternalItemsQuery
                 {
@@ -395,7 +396,7 @@ namespace StrmAssistant.Common
             }
 
             var itemsWithExtras = new List<BaseItem>();
-            if (!libraryIds.Any() || libraryIds.Any(id => id != "-1"))
+            if (!libraryIds.Any() || libraries.Any())
             {
                 var itemsQuery = new InternalItemsQuery
                 {
@@ -703,6 +704,9 @@ namespace StrmAssistant.Common
                         await Plugin.SubtitleApi.UpdateExternalSubtitles(taskItem, refreshOptions, false, true)
                             .ConfigureAwait(false);
                     }
+
+                    if (!mediaInfoRestoreMode && taskItem is Video cachedVideo)
+                        await Plugin.ImageCaptureApi.CaptureIfMissing(cachedVideo, directoryService, cancellationToken).ConfigureAwait(false);
 
                     return false;
                 }

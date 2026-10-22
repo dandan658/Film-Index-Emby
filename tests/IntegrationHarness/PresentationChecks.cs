@@ -7,6 +7,7 @@ using MediaBrowser.Model.Configuration;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Users;
 using StrmAssistant.Options;
+using System.Text.Json;
 
 namespace FilmIndex.IntegrationTests;
 
@@ -54,6 +55,23 @@ internal static class PresentationChecks
             var ascending = library.GetItemList(new InternalItemsQuery { User = user, ParentIds = new[] { seasons[0].InternalId },
                 IncludeItemTypes = new[] { nameof(Episode) }, OrderBy = new[] { ("IndexNumber", SortOrder.Ascending) } });
             check(ascending.Length == 2 && ascending[0].IndexNumber == 1, "Explicit ascending episode order remains authoritative");
+            using (var http = new HttpClient(new HttpClientHandler { UseProxy = false }) { BaseAddress = new Uri("http://127.0.0.1:18766/emby/") })
+            {
+                var password = Guid.NewGuid().ToString("N"); await users.ChangePassword(user, password);
+                http.DefaultRequestHeaders.TryAddWithoutValidation("X-Emby-Authorization", "MediaBrowser Client=\"FilmIndexFixture\", Device=\"Fixture\", DeviceId=\"presentation-fixture\", Version=\"1\"");
+                using var auth = await http.PostAsync("Users/AuthenticateByName", new StringContent(JsonSerializer.Serialize(new { Username = user.Name, Pw = password }), System.Text.Encoding.UTF8, "application/json"));
+                auth.EnsureSuccessStatusCode();
+                using var payload = JsonDocument.Parse(await auth.Content.ReadAsStringAsync());
+                http.DefaultRequestHeaders.Remove("X-Emby-Authorization");
+                http.DefaultRequestHeaders.TryAddWithoutValidation("X-Emby-Token", payload.RootElement.GetProperty("AccessToken").GetString());
+                var path = "Users/" + user.Id.ToString("N") + "/Items?Ids=" + string.Join(",", episodes.Select(item => item.InternalId)) + "&Recursive=true&IncludeItemTypes=Episode";
+                using var defaults = JsonDocument.Parse(await http.GetStringAsync(path));
+                check(defaults.RootElement.GetProperty("Items")[0].GetProperty("IndexNumber").GetInt32() == 2,
+                    "Real HTTP episode endpoint applies descending defaults before native folder sorting");
+                using var explicitOrder = JsonDocument.Parse(await http.GetStringAsync(path + "&SortBy=IndexNumber&SortOrder=Ascending"));
+                check(explicitOrder.RootElement.GetProperty("Items")[0].GetProperty("IndexNumber").GetInt32() == 1,
+                    "Real HTTP episode endpoint preserves explicit ascending order");
+            }
             var recent = new InternalItemsQuery { User = user, WasSearched = true, Recursive = true };
             check(library.GetItemList(recent).Length == 0 && (recent.ItemIds == null || recent.ItemIds.Length == 0), "Search-history suppression preserves the original query object");
             var value = data.GetUserData(user, episodes[0]); value.Played = true; data.SaveUserData(user, episodes[0], value, UserDataSaveReason.TogglePlayed, CancellationToken.None);
@@ -65,6 +83,9 @@ internal static class PresentationChecks
                 StrmAssistant.Common.LibraryApi.AllUsers[user] = false;
                 check(StrmAssistant.Plugin.LibraryApi.FetchPreExtractTaskItems().Any(item => item.InternalId == episodes[0].InternalId),
                     "Favorites extraction discovers episodes nested beneath library, series and season folders");
+                options.MediaInfoExtractOptions.LibraryScope = Guid.NewGuid().ToString("N"); save(options);
+                check(StrmAssistant.Plugin.LibraryApi.FetchPreExtractTaskItems().Count == 0 && StrmAssistant.Plugin.LibraryApi.FetchPostExtractTaskItems(true).Count == 0,
+                    "Removed library IDs never expand extraction or persistence to all libraries");
             }
             finally
             {

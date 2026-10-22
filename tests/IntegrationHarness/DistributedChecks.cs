@@ -44,7 +44,7 @@ internal static class DistributedChecks
             client.DefaultRequestHeaders.TryAddWithoutValidation("X-Emby-Token", token);
             options.DistributedOptions.ServeWorker = false; save(options);
             using (var disabled = await Post(client, "FilmIndex/Worker/Probe", request))
-                check(!disabled.IsSuccessStatusCode, "Worker endpoint rejects requests while worker mode is disabled");
+                check(disabled.StatusCode == HttpStatusCode.Forbidden, "Worker endpoint returns forbidden while worker mode is disabled");
             options.DistributedOptions.ServeWorker = true;
             options.DistributedOptions.AllowedRoots = Path.Combine(root, "movies"); save(options);
             using (var response = await Post(client, "FilmIndex/Worker/Probe", request))
@@ -60,7 +60,7 @@ internal static class DistributedChecks
                 check(!mismatch.IsSuccessStatusCode, "Worker refuses a source whose size differs from the master");
             request.SourcePath = Path.Combine(root, "music", "track.mp3"); request.ExpectedSize = null;
             using (var outside = await Post(client, "FilmIndex/Worker/Probe", request))
-                check(!outside.IsSuccessStatusCode, "Worker refuses files outside configured roots");
+                check(outside.StatusCode == HttpStatusCode.Forbidden, "Worker returns forbidden for files outside configured roots");
             options.DistributedOptions.UseWorker = true;
             options.DistributedOptions.WorkerUrl = "http://127.0.0.1:18766";
             options.DistributedOptions.WorkerApiKey = token; save(options);

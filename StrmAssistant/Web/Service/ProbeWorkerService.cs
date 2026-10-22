@@ -7,7 +7,7 @@ using StrmAssistant.Common;
 using StrmAssistant.Web.Api;
 using System;
 using System.IO;
-using System.Security;
+using SecurityException = MediaBrowser.Controller.Net.SecurityException;
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -395,11 +395,14 @@ namespace StrmAssistant
                 options.GeneralOptions.CatchupTaskScope = string.Join(",", selectedTasks);
             }
 
+            var hadMediaScope = !string.IsNullOrWhiteSpace(options.MediaInfoExtractOptions.LibraryScope);
             options.MediaInfoExtractOptions.LibraryScope = string.Join(",",
                 options.MediaInfoExtractOptions.LibraryScope
                     ?.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                     .Where(v => options.MediaInfoExtractOptions.LibraryList.Any(option => option.Value == v)) ??
                 Enumerable.Empty<string>());
+            if (hadMediaScope && string.IsNullOrEmpty(options.MediaInfoExtractOptions.LibraryScope))
+                options.MediaInfoExtractOptions.LibraryScope = "-2";
 
             options.IntroSkipOptions.LibraryScope = string.Join(",",
                 options.IntroSkipOptions.LibraryScope
@@ -613,6 +616,7 @@ namespace StrmAssistant
             var list = new List<EditorSelectOption>();
             var listShow = new List<EditorSelectOption>();
             var listMarkerEnabled = new List<EditorSelectOption>();
+            list.Add(new EditorSelectOption { Value = "-2", Name = "不处理任何媒体库", IsEnabled = true });
 
             list.Add(new EditorSelectOption
             {

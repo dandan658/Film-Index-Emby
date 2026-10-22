@@ -1,4 +1,5 @@
 using HarmonyLib;
+using MediaBrowser.Controller.Api;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
@@ -34,8 +35,18 @@ namespace StrmAssistant.Common
                     _patch.Patch(method, prefix: new HarmonyMethod(typeof(PresentationApi), nameof(Query)));
                 var dto = _dto.GetType().GetMethod("GetBaseItemDtoInternal", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 if (dto != null) _patch.Patch(dto, postfix: new HarmonyMethod(typeof(PresentationApi), nameof(ItemDto)));
+                var requestQuery = typeof(BaseApiService).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Single(method => method.Name == "GetItemsQuery" && method.GetParameters().Length == 5);
+                _patch.Patch(requestQuery, postfix: new HarmonyMethod(typeof(PresentationApi), nameof(RequestQuery)));
             }
             catch (Exception error) { _patch?.UnpatchAll(_patch.Id); Plugin.Instance.Logger.Warn("FilmIndex presentation unavailable: " + error.GetType().Name); }
+        }
+        public static void RequestQuery(BaseItemsRequest __1, ref InternalItemsQuery __result)
+        {
+            // Folder.GetItems supplies its own ascending order before calling the library manager.
+            // Apply the requested display default while the original HTTP request is still available.
+            if (__1 == null || !string.IsNullOrWhiteSpace(__1.SortBy) || !string.IsNullOrWhiteSpace(__1.SortOrder)) return;
+            Query(ref __result);
         }
         public static void Query(ref InternalItemsQuery __0)
         {

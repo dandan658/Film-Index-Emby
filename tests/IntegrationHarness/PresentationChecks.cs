@@ -44,16 +44,33 @@ internal static class PresentationChecks
             options.ExperienceEnhanceOptions.ShowTotalEpisodes = true; options.ExperienceEnhanceOptions.ShowLibraryItemCounts = true;
             options.ExperienceEnhanceOptions.IncludeSeasonCollections = true; options.ExperienceEnhanceOptions.HideSearchRecommendations = true; save(options);
             var query = new InternalItemsQuery { User = user, ParentIds = new[] { series.InternalId }, Recursive = false,
-                IncludeItemTypes = new[] { nameof(Season) }, OrderBy = new[] { ("IndexNumber", SortOrder.Ascending) } };
+                IncludeItemTypes = new[] { nameof(Season) } };
             var orderedSeasons = library.GetItemList(query);
-            check(orderedSeasons.Length == 2 && orderedSeasons[0].IndexNumber == 2 && query.OrderBy[0].Item2 == SortOrder.Ascending,
+            check(orderedSeasons.Length == 2 && orderedSeasons[0].IndexNumber == 2 && (query.OrderBy == null || query.OrderBy.Length == 0),
                 "Native season queries reverse the display order without mutating caller preferences");
             var orderedEpisodes = library.GetItemList(new InternalItemsQuery { User = user, ParentIds = new[] { seasons[0].InternalId }, Recursive = false,
-                IncludeItemTypes = new[] { nameof(Episode) }, OrderBy = new[] { ("IndexNumber", SortOrder.Ascending) } });
+                IncludeItemTypes = new[] { nameof(Episode) } });
             check(orderedEpisodes.Length == 2 && orderedEpisodes[0].IndexNumber == 2, "Native episode display queries support descending episode order");
+            var ascending = library.GetItemList(new InternalItemsQuery { User = user, ParentIds = new[] { seasons[0].InternalId },
+                IncludeItemTypes = new[] { nameof(Episode) }, OrderBy = new[] { ("IndexNumber", SortOrder.Ascending) } });
+            check(ascending.Length == 2 && ascending[0].IndexNumber == 1, "Explicit ascending episode order remains authoritative");
             var recent = new InternalItemsQuery { User = user, WasSearched = true, Recursive = true };
             check(library.GetItemList(recent).Length == 0 && (recent.ItemIds == null || recent.ItemIds.Length == 0), "Search-history suppression preserves the original query object");
             var value = data.GetUserData(user, episodes[0]); value.Played = true; data.SaveUserData(user, episodes[0], value, UserDataSaveReason.TogglePlayed, CancellationToken.None);
+            var scopeBefore = options.MediaInfoExtractOptions.LibraryScope;
+            value.IsFavorite = true; data.SaveUserData(user, episodes[0], value, UserDataSaveReason.TogglePlayed, CancellationToken.None);
+            try
+            {
+                options.MediaInfoExtractOptions.LibraryScope = "-1"; save(options);
+                StrmAssistant.Common.LibraryApi.AllUsers[user] = false;
+                check(StrmAssistant.Plugin.LibraryApi.FetchPreExtractTaskItems().Any(item => item.InternalId == episodes[0].InternalId),
+                    "Favorites extraction discovers episodes nested beneath library, series and season folders");
+            }
+            finally
+            {
+                StrmAssistant.Common.LibraryApi.AllUsers.Remove(user);
+                options.MediaInfoExtractOptions.LibraryScope = scopeBefore; save(options);
+            }
             var dtoOptions = new DtoOptions { EnableUserData = true, EnableImages = false };
             var card = dto.GetBaseItemDto(series, dtoOptions, user);
             check(card.UserData.UnplayedItemCount == 4 && data.GetUserData(user, episodes[0]).Played,

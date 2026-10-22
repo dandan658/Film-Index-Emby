@@ -46,10 +46,11 @@ namespace StrmAssistant.Common
                 var empty = (InternalItemsQuery)Clone.Invoke(__0, null); empty.ItemIds = new[] { -1L }; __0 = empty; return;
             }
             var types = __0.IncludeItemTypes;
-            if (types?.Length != 1 || __0.OrderBy?.Length == 0 || __0.OrderBy == null) return;
+            // Defaults must not override an explicit sort requested by a client or task.
+            if (types?.Length != 1 || __0.OrderBy?.Length > 0) return;
             var seasons = types[0] == nameof(Season) && settings.DescendingSeasons;
             var episodes = types[0] == nameof(Episode) && settings.DescendingEpisodes;
-            if ((!seasons && !episodes) || __0.OrderBy.Any(order => order.Item1 != "SortName" && order.Item1 != "IndexNumber" && order.Item1 != "ParentIndexNumber")) return;
+            if (!seasons && !episodes) return;
             var copy = (InternalItemsQuery)Clone.Invoke(__0, null);
             copy.OrderBy = episodes ? new[] { ("ParentIndexNumber", SortOrder.Descending), ("IndexNumber", SortOrder.Descending) } : new[] { ("IndexNumber", SortOrder.Descending) };
             __0 = copy;

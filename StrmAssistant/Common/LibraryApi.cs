@@ -269,6 +269,7 @@ namespace StrmAssistant.Common
                     .SelectMany(user => _libraryManager.GetItemList(new InternalItemsQuery
                     {
                         User = user,
+                        Recursive = true,
                         IsFavorite = true
                     })).GroupBy(i => i.InternalId).Select(g => g.First()).ToList();
 
@@ -378,7 +379,7 @@ namespace StrmAssistant.Common
                 var favorites = AllUsers.Select(e => e.Key)
                     .SelectMany(user => _libraryManager.GetItemList(new InternalItemsQuery
                     {
-                        User = user, IsFavorite = true
+                        User = user, Recursive = true, IsFavorite = true
                     }))
                     .GroupBy(i => i.InternalId)
                     .Select(g => g.First())
